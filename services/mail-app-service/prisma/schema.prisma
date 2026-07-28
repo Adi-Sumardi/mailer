@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FolderType {
+  inbox
+  sent
+  draft
+  trash
+  custom
+}
+
+enum SendStatus {
+  draft
+  queued
+  sent
+  cancelled
+}
+
+model Mailbox {
+  id           String   @id @default(uuid()) @map("mailbox_id")
+  userId       String   @unique @map("user_id")
+  emailAddress String   @unique @map("email_address")
+  quotaMb      Int      @default(1024) @map("quota_mb")
+  usedMb       Int      @default(0) @map("used_mb")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  folders Folder[]
+  emails  Email[]
+
+  @@map("mailbox")
+}
+
+model Folder {
+  id         String     @id @default(uuid()) @map("folder_id")
+  mailbox    Mailbox    @relation(fields: [mailboxId], references: [id])
+  mailboxId  String     @map("mailbox_id")
+  folderName String     @map("folder_name")
+  folderType FolderType @default(custom) @map("folder_type")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  emails Email[]
+
+  @@unique([mailboxId, folderName])
+  @@map("folder")
+}
+
+model Email {
+  id     String  @id @default(uuid()) @map("email_id")
+  mailbox   Mailbox @relation(fields: [mailboxId], references: [id])
+  mailboxId String  @map("mailbox_id")
+  folder    Folder  @relation(fields: [folderId], references: [id])
+  folderId  String  @map("folder_id")
+
+  // Pengelompokan percakapan (FR-11) — default sama dengan id pesan pertama di thread.
+  threadId String @map("thread_id")
+
+  // Reply/forward chain (FR-06)
+  parentEmailId String? @map("parent_email_id")
+
+  // Menghubungkan salinan pengirim (Sent) <-> salinan penerima (Inbox) untuk keperluan
+  // recall internal (FR-11a.1) — TIDAK dipakai untuk penerima eksternal (tidak ada salinan lokal).
+  relatedEmailId String? @map("related_email_id")
+
+  fromAddr String @map("from_addr")
+  toAddr   String @map("to_addr")
+  subject  String
+  body     String
+
+  isRead      Boolean @default(false) @map("is_read")
+  isImportant Boolean @default(false) @map("is_important")
+  isSpam      Boolean @default(false) @map("is_spam")
+
+  // FR-11a: status pengiriman & jendela pembatalan.
+  sendStatus       SendStatus @default(sent) @map("send_status")
+  recallDeadlineAt DateTime?  @map("recall_deadline_at")
+  recalled         Boolean    @default(false) @map("recalled")
+
+  sentAt    DateTime? @map("sent_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  attachments Attachment[]
+
+  @@map("email")
+}
+
+model Attachment {
+  id      String @id @default(uuid()) @map("attachment_id")
+  email   Email  @relation(fields: [emailId], references: [id])
+  emailId String @map("email_id")
+
+  filename    String
+  sizeKb      Int    @map("size_kb")
+  // Path/key di object storage (S3/MinIO) — upload sebenarnya di luar scope service ini,
+  // diasumsikan sudah diunggah lewat presigned URL sebelum metadata ini dibuat.
+  storagePath String @map("storage_path")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("attachment")
+}

@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConditionField {
+  sender
+  subject
+  body
+}
+
+enum ConditionOperator {
+  contains
+  equals
+}
+
+enum ActionType {
+  move_folder
+  forward
+  auto_reply
+  delete
+}
+
+model AutomationRule {
+  id     String @id @default(uuid()) @map("rule_id")
+  userId String @map("user_id")
+
+  name String
+
+  // FR-19: kondisi — mis. "pengirim mengandung '@vendor.com'"
+  conditionField    ConditionField
+  conditionOperator ConditionOperator @default(contains) @map("condition_operator")
+  conditionValue    String            @map("condition_value")
+
+  // FR-19: aksi — mis. "pindahkan ke folder 'Vendor'". actionValue diinterpretasikan
+  // sesuai actionType (nama folder / alamat forward / isi auto-reply, tidak dipakai untuk delete).
+  actionType  ActionType @map("action_type")
+  actionValue String?    @map("action_value")
+
+  // FR-21: aktif/nonaktifkan tanpa hapus
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("automation_rule")
+}

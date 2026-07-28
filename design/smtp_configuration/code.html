@@ -1,0 +1,266 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-primary":"#ffffff","on-secondary-fixed-variant":"#3c475a","on-error-container":"#93000a","secondary-fixed-dim":"#bcc7de","primary-fixed-dim":"#ffb3b6","on-secondary":"#ffffff","secondary-container":"#d5e0f8","on-surface":"#0b1c30","outline":"#906f70","background":"#f8f9ff","surface-container":"#e5eeff","tertiary-fixed-dim":"#c4c7c9","secondary-fixed":"#d8e3fb","surface-bright":"#f8f9ff","on-surface-variant":"#5c3f40","surface":"#f8f9ff","tertiary-fixed":"#e0e3e5","tertiary-container":"#717476","surface-container-high":"#dce9ff","error-container":"#ffdad6","inverse-primary":"#ffb3b6","primary":"#b80035","on-primary-container":"#fffaf9","error":"#ba1a1a","on-tertiary-fixed":"#191c1e","surface-container-low":"#eff4ff","inverse-on-surface":"#eaf1ff","on-primary-fixed":"#40000c","on-error":"#ffffff","surface-variant":"#d3e4fe","primary-fixed":"#ffdada","secondary":"#545f73","tertiary":"#585c5d","on-tertiary-container":"#f9fbfd","surface-container-lowest":"#ffffff","on-secondary-container":"#586377","surface-tint":"#be0037","on-tertiary":"#ffffff","primary-container":"#e11d48","surface-dim":"#cbdbf5","surface-container-highest":"#d3e4fe","on-primary-fixed-variant":"#920028","inverse-surface":"#213145","on-secondary-fixed":"#111c2d","on-background":"#0b1c30","outline-variant":"#e5bdbe","on-tertiary-fixed-variant":"#444749"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"stack-xl":"48px","margin-desktop":"32px","stack-xs":"4px","margin-mobile":"16px","stack-lg":"24px","stack-sm":"8px","container-max":"1280px","stack-md":"16px","gutter":"24px"},"fontFamily":{"body-md":["Inter"],"label-caps":["Inter"],"body-sm":["Inter"],"code-sm":["JetBrains Mono"],"headline-xl":["Inter"],"headline-lg":["Inter"],"headline-xl-mobile":["Inter"],"body-lg":["Inter"],"headline-md":["Inter"]},"fontSize":{"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"code-sm":["13px",{"lineHeight":"20px","fontWeight":"450"}],"headline-xl":["40px",{"lineHeight":"48px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-lg":["30px",{"lineHeight":"38px","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-xl-mobile":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-md":["24px",{"lineHeight":"32px","fontWeight":"600"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-background"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest z-50 flex flex-col border-r border-outline-variant shadow-sm"><div class="px-margin-mobile py-stack-lg flex items-center gap-stack-sm"><img alt="RedMail Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzgkH0NkXvb-bJg7ZxvzL0iWd87sCsxbnMBFz2-SO7ZEw-XUH4H3ZCtY34GQnsXpFx3bnwj-19VuK7T6GPbUvChQ8BNesmmX5wHyJ0Fd56QyTqfYyQ7I1DDaSlK5jG0wSvkZ_o-mcrB1mKplSUoLkBvSyp6O-uSG8yW9Sfuqun1QQAOC0sBrRDaSGllik3HCBW1tKqPZwRm6FrK7rZuXl6gcqKRP1dPVdemZoo2bnEg4w2HBLmrg-g"/><span class="font-headline-md text-primary tracking-tight">RedMail</span></div><nav class="flex-1 px-stack-sm space-y-stack-xs" data-active-classes="bg-primary-container text-on-primary-container font-semibold"><a class="flex items-center px-stack-md py-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-stack-md">dashboard</span><span class="font-body-sm">Dashboard</span></a><a aria-current="page" class="flex items-center px-stack-md py-stack-sm rounded-lg transition-all group bg-primary-container text-on-primary-container font-semibold" data-path="smtp-configuration" href="#"><span class="material-symbols-outlined mr-stack-md">settings_input_component</span><span class="font-body-sm">SMTP Config</span></a><a class="flex items-center px-stack-md py-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="delivery-logs" href="#"><span class="material-symbols-outlined mr-stack-md">list_alt</span><span class="font-body-sm">Delivery Logs</span></a><a class="flex items-center px-stack-md py-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="api-keys" href="#"><span class="material-symbols-outlined mr-stack-md">vpn_key</span><span class="font-body-sm">API Keys</span></a><a class="flex items-center px-stack-md py-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="analytics" href="#"><span class="material-symbols-outlined mr-stack-md">monitoring</span><span class="font-body-sm">Analytics</span></a><a class="flex items-center px-stack-md py-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="settings" href="#"><span class="material-symbols-outlined mr-stack-md">settings</span><span class="font-body-sm">Settings</span></a></nav></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/80 backdrop-blur-md z-40 border-b border-outline-variant flex items-center justify-between px-margin-desktop"><div class="flex items-center gap-stack-md"><span class="material-symbols-outlined text-primary">bolt</span><span class="font-label-caps text-on-surface-variant uppercase">High Priority Queue Active</span></div><div class="flex items-center gap-stack-lg"><div class="flex flex-col items-end"><span class="font-body-sm font-semibold text-on-surface">Dev Team Alpha</span><span class="text-[11px] text-on-surface-variant">Pro Plan</span></div><img alt="Profile" class="w-9 h-9 rounded-full object-cover border-2 border-primary-fixed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhZuAKST_YsNdhs4H7SBIjfHkZnCf2MVoq5BSFybvgjVwaRRevrwven0QhpGFTH91QaBpq6iFpe-rVt2v5J-yVdUm1YDZbOPsYI450_uQUzX8Rg1nS4PimqgoosCmrA939EMe7-00XRxkd3y7y-GmVGMkQHrsUUS8yLzeYsW_Dc7aeeB909o3wzlioo_cbV8PlhbYJ9N-bS78o7XP7w_vsEvfNQri20L9satNOm037qZlqfe0wvB7U"/></div></header><main class="relative pt-16 min-h-screen bg-background p-margin-desktop"><div class="flex flex-col w-full gap-stack-xl">
+<!-- Header Section with Stats -->
+<div class="grid grid-cols-12 gap-gutter items-end">
+<div class="col-span-12 lg:col-span-8">
+<div class="flex items-center gap-stack-sm mb-stack-sm">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-caps text-on-surface-variant uppercase tracking-widest">Inbound Node: us-east-1</span>
+</div>
+<h1 class="font-headline-xl text-on-surface">SMTP Configuration</h1>
+<p class="font-body-lg text-on-surface-variant mt-stack-sm max-w-2xl">
+                Configure your outbound delivery gateway. These credentials authorize your application to route high-volume mail through RedMail's optimized MTA cluster.
+            </p>
+</div>
+<div class="col-span-12 lg:col-span-4 flex justify-end gap-stack-md">
+<div class="bg-surface-container-low p-stack-md rounded-xl flex items-center gap-stack-md shadow-sm">
+<div class="flex flex-col">
+<span class="font-label-caps text-on-surface-variant opacity-70">Global Uptime</span>
+<span class="font-headline-md text-primary">99.998%</span>
+</div>
+<div class="w-px h-10 bg-outline-variant"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-on-surface-variant opacity-70">Latency</span>
+<span class="font-headline-md text-on-surface">14ms</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Config Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Form Column -->
+<div class="col-span-12 lg:col-span-7 space-y-stack-lg">
+<div class="bg-surface-container-lowest rounded-xl shadow-md p-stack-lg relative overflow-hidden">
+<!-- Decorative Accent -->
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+<div class="flex items-center justify-between mb-stack-xl border-b border-outline-variant pb-stack-md">
+<h2 class="font-headline-md text-on-surface flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-primary">dns</span>
+                        Server Credentials
+                    </h2>
+<button class="group flex items-center gap-stack-xs px-stack-md py-stack-sm rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" onclick="copyAllSettings()">
+<span class="material-symbols-outlined text-[20px] group-active:scale-90 transition-transform">content_copy</span>
+<span class="font-label-caps">Copy All</span>
+</button>
+</div>
+<form class="space-y-stack-lg" id="smtp-form">
+<div class="grid grid-cols-12 gap-stack-lg">
+<!-- Host -->
+<div class="col-span-12 md:col-span-8 group">
+<label class="block font-label-caps text-on-surface-variant mb-stack-xs ml-1">SMTP Host</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border-b-2 border-transparent focus:border-primary focus:bg-white transition-all px-stack-md py-stack-md rounded-t-lg font-code-sm text-on-surface outline-none" id="smtp-host" type="text" value="smtp.redmail.io"/>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant/30 group-focus-within:text-primary transition-colors">hub</span>
+</div>
+</div>
+<!-- Port -->
+<div class="col-span-12 md:col-span-4">
+<label class="block font-label-caps text-on-surface-variant mb-stack-xs ml-1">Port</label>
+<select class="w-full bg-surface-container-low border-b-2 border-transparent focus:border-primary focus:bg-white transition-all px-stack-md py-stack-md rounded-t-lg font-code-sm text-on-surface outline-none appearance-none cursor-pointer">
+<option>587 (Recommended)</option>
+<option>465 (SSL)</option>
+<option>25 (Legacy)</option>
+<option>2525</option>
+</select>
+</div>
+<!-- Username -->
+<div class="col-span-12">
+<label class="block font-label-caps text-on-surface-variant mb-stack-xs ml-1">Username / API Key</label>
+<input class="w-full bg-surface-container-low border-b-2 border-transparent focus:border-primary focus:bg-white transition-all px-stack-md py-stack-md rounded-t-lg font-code-sm text-on-surface outline-none" type="text" value="rm_auth_928374829374"/>
+</div>
+<!-- Password -->
+<div class="col-span-12">
+<label class="block font-label-caps text-on-surface-variant mb-stack-xs ml-1">SMTP Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border-b-2 border-transparent focus:border-primary focus:bg-white transition-all px-stack-md py-stack-md rounded-t-lg font-code-sm text-on-surface outline-none" id="smtp-pass" type="password" value="••••••••••••••••••••••••"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors" onclick="togglePass()" type="button">
+<span class="material-symbols-outlined" id="pass-icon">visibility</span>
+</button>
+</div>
+</div>
+<!-- Encryption -->
+<div class="col-span-12">
+<label class="block font-label-caps text-on-surface-variant mb-stack-xs ml-1">Encryption Protocol</label>
+<div class="flex gap-stack-md">
+<label class="flex-1 cursor-pointer">
+<input checked="" class="hidden peer" name="enc" type="radio"/>
+<div class="p-stack-md rounded-xl border border-outline-variant peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
+<span class="font-body-sm font-semibold block text-on-surface">STARTTLS</span>
+<span class="text-[11px] text-on-surface-variant">Opportunistic Security</span>
+</div>
+</label>
+<label class="flex-1 cursor-pointer">
+<input class="hidden peer" name="enc" type="radio"/>
+<div class="p-stack-md rounded-xl border border-outline-variant peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
+<span class="font-body-sm font-semibold block text-on-surface">SSL / TLS</span>
+<span class="text-[11px] text-on-surface-variant">Forced Encryption</span>
+</div>
+</label>
+</div>
+</div>
+</div>
+<div class="pt-stack-xl flex flex-col md:flex-row gap-stack-md">
+<button class="flex-1 bg-on-surface text-on-primary py-stack-md rounded-lg font-label-caps flex items-center justify-center gap-stack-sm hover:opacity-90 active:scale-[0.98] transition-all" id="test-btn" type="button">
+<span class="material-symbols-outlined">image_arrow_up</span>
+                            Test Connection
+                        </button>
+<button class="flex-1 bg-primary text-on-primary py-stack-md rounded-lg font-label-caps flex items-center justify-center gap-stack-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20" type="submit">
+<span class="material-symbols-outlined">save</span>
+                            Save Configuration
+                        </button>
+</div>
+</form>
+</div>
+</div>
+<!-- Sidebar / Help Column -->
+<div class="col-span-12 lg:col-span-5 space-y-stack-lg">
+<!-- Quick Integration Card -->
+<div class="bg-inverse-surface text-on-primary rounded-xl p-stack-lg shadow-xl relative overflow-hidden">
+<div class="absolute -right-8 -bottom-8 opacity-10">
+<span class="material-symbols-outlined text-[120px]">terminal</span>
+</div>
+<h3 class="font-headline-md mb-stack-md text-white">Quick Integration</h3>
+<div class="space-y-stack-md">
+<div class="bg-black/30 rounded-lg p-stack-md font-code-sm text-[13px] border border-white/10">
+<div class="flex justify-between items-center mb-stack-sm border-b border-white/10 pb-stack-xs">
+<span class="text-primary-fixed-dim">Node.js (Nodemailer)</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer hover:text-primary transition-colors">content_copy</span>
+</div>
+<code class="text-on-primary/80 block">
+                            const transporter = nodemailer.createTransport({<br/>
+                              host: <span class="text-primary-fixed-dim">"smtp.redmail.io"</span>,<br/>
+                              port: <span class="text-primary-fixed-dim">587</span>,<br/>
+                              secure: <span class="text-primary-fixed-dim">false</span>,<br/>
+                              auth: { user: <span class="text-primary-fixed-dim">"API_KEY"</span>, pass: <span class="text-primary-fixed-dim">"PASS"</span> }<br/>
+                            });
+                        </code>
+</div>
+<div class="bg-black/30 rounded-lg p-stack-md font-code-sm text-[13px] border border-white/10">
+<div class="flex justify-between items-center mb-stack-sm border-b border-white/10 pb-stack-xs">
+<span class="text-primary-fixed-dim">Python (smtplib)</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer hover:text-primary transition-colors">content_copy</span>
+</div>
+<code class="text-on-primary/80 block">
+                            with smtplib.SMTP(<span class="text-primary-fixed-dim">"smtp.redmail.io"</span>, 587) as server:<br/>
+                              server.starttls()<br/>
+                              server.login(user, password)
+                        </code>
+</div>
+</div>
+</div>
+<!-- Security Advisory -->
+<div class="bg-surface-container-high rounded-xl p-stack-lg border-l-4 border-primary">
+<div class="flex items-start gap-stack-md">
+<span class="material-symbols-outlined text-primary text-[32px]">shield_with_heart</span>
+<div>
+<h4 class="font-headline-md text-on-surface mb-stack-xs">Security Best Practices</h4>
+<p class="font-body-sm text-on-surface-variant leading-relaxed">
+                            Always rotate your SMTP credentials every 90 days. We recommend using distinct API Keys for different environment tiers (Staging vs Production) to minimize blast radius.
+                        </p>
+<a class="inline-flex items-center gap-stack-xs mt-stack-md text-primary font-label-caps hover:underline" href="#">
+                            View Security Docs
+                            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+<!-- Connection Status Visualizer -->
+<div class="bg-surface-container-lowest rounded-xl p-stack-lg shadow-sm border border-outline-variant">
+<div class="flex items-center justify-between mb-stack-md">
+<h4 class="font-label-caps text-on-surface-variant uppercase">Tunnel Health</h4>
+<span class="px-stack-sm py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full uppercase tracking-tighter">Verified</span>
+</div>
+<div class="relative h-24 flex items-end gap-1">
+<div class="flex-1 bg-primary/20 h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[45%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/30 h-[80%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[95%] rounded-t-sm animate-pulse"></div>
+<div class="flex-1 bg-primary/60 h-[70%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[50%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[65%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[90%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[30%] rounded-t-sm"></div>
+</div>
+<div class="flex justify-between mt-stack-sm">
+<span class="text-[10px] text-on-surface-variant font-mono">24h ago</span>
+<span class="text-[10px] text-on-surface-variant font-mono">Current</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Test Connection Modal (Hidden by Default) -->
+<div class="fixed inset-0 z-[60] flex items-center justify-center p-stack-xl pointer-events-none opacity-0 transition-all duration-300" id="test-modal">
+<div class="absolute inset-0 bg-on-surface/40 backdrop-blur-sm"></div>
+<div class="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-stack-xl transform scale-95 transition-transform duration-300">
+<div class="text-center">
+<div class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-stack-lg" id="modal-icon-container">
+<span class="material-symbols-outlined text-[40px] animate-spin">refresh</span>
+</div>
+<h3 class="font-headline-md text-on-surface mb-stack-sm" id="modal-title">Testing Connection...</h3>
+<p class="font-body-md text-on-surface-variant mb-stack-xl" id="modal-body">Verifying handshake with smtp.redmail.io on port 587</p>
+<button class="w-full py-stack-md border border-outline-variant rounded-lg font-label-caps hover:bg-surface-container-low transition-colors" onclick="closeModal()">
+                Cancel
+            </button>
+</div>
+</div>
+</div>
+<script>
+    function togglePass() {
+        const input = document.getElementById('smtp-pass');
+        const icon = document.getElementById('pass-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = 'visibility_off';
+        } else {
+            input.type = 'password';
+            icon.textContent = 'visibility';
+        }
+    }
+
+    function copyAllSettings() {
+        const host = document.getElementById('smtp-host').value;
+        navigator.clipboard.writeText(`Host: ${host}\nPort: 587\nUser: rm_auth_928374829374`);
+        
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="material-symbols-outlined text-[20px] text-green-500">check_circle</span><span class="font-label-caps">Copied!</span>';
+        setTimeout(() => btn.innerHTML = originalHtml, 2000);
+    }
+
+    const testBtn = document.getElementById('test-btn');
+    const modal = document.getElementById('test-modal');
+    const modalContent = modal.querySelector('.relative');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalIcon = document.getElementById('modal-icon-container');
+
+    testBtn.addEventListener('click', () => {
+        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modalContent.classList.remove('scale-95');
+        modalContent.classList.add('scale-100');
+
+        setTimeout(() => {
+            modalIcon.innerHTML = '<span class="material-symbols-outlined text-[40px]">check</span>';
+            modalIcon.className = 'w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-stack-lg';
+            modalTitle.textContent = 'Connection Successful';
+            modalBody.textContent = 'SMTP handshake completed in 142ms. Your credentials are valid.';
+        }, 2000);
+    });
+
+    function closeModal() {
+        modal.classList.add('pointer-events-none', 'opacity-0');
+        modalContent.classList.remove('scale-100');
+        modalContent.classList.add('scale-95');
+        
+        // Reset after transition
+        setTimeout(() => {
+            modalIcon.innerHTML = '<span class="material-symbols-outlined text-[40px] animate-spin">refresh</span>';
+            modalIcon.className = 'w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-stack-lg';
+            modalTitle.textContent = 'Testing Connection...';
+            modalBody.textContent = 'Verifying handshake with smtp.redmail.io on port 587';
+        }, 300);
+    }
+</script></main></div></body></html>

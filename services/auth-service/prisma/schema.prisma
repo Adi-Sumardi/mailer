@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  super_admin
+  tenant_admin
+  end_user
+}
+
+model User {
+  id           String   @id @default(uuid()) @map("user_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(end_user)
+
+  // null untuk super_admin (tidak terikat satu tenant). Divalidasi best-effort ke
+  // domain-provisioning saat register (fail-open kalau service itu tidak terjangkau) — lihat README.
+  tenantId String? @map("tenant_id")
+
+  // null sampai mailbox berhasil diprovisikan lewat mail-app-service (FR-07).
+  mailboxId String? @map("mailbox_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+
+  @@map("app_user")
+}
+
+model RefreshToken {
+  id     String @id @default(uuid()) @map("refresh_token_id")
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id")
+
+  // Disimpan hash (SHA-256) — token mentah hanya pernah ada di response ke client sekali saja.
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("refresh_token")
+}

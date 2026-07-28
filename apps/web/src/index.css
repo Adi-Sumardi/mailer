@@ -1,0 +1,65 @@
+/* Design tokens diadopsi dari design/kinetic_transmission/DESIGN.md — lihat
+   docs/UIUX_Design_Spec_SendagoMail.md §2 untuk rasionalisasi & pemetaan lengkap. */
+:root {
+  --color-primary: #b80035;
+  --color-primary-accent: #e11d48;
+  --color-secondary: #545f73;
+  --color-background: #f8f9ff;
+  --color-surface: #ffffff;
+  --color-surface-container: #eff4ff;
+  --color-on-surface: #0b1c30;
+  --color-on-surface-variant: #5c3f40;
+  --color-outline: #d3e4fe;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-success: #1b7a3d;
+  --color-success-container: #d6f5e0;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-pill: 9999px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 48px;
+
+  --font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  background: var(--color-background);
+  color: var(--color-on-surface);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+a {
+  color: var(--color-primary-accent);
+}

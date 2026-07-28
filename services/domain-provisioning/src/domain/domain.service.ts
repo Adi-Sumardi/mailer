@@ -1,0 +1,148 @@
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { randomBytes } from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateDomainDto } from './dto/create-domain.dto';
+import {
+  buildDmarcRecord,
+  buildMxRecord,
+  buildSpfRecord,
+  generateDkimKeyPair,
+  verifyDomainTxtRecord,
+} from './dns-record.util';
+import { writeDkimKeyToMailEngine } from './dkim-handoff.util';
+
+@Injectable()
+export class DomainService {
+  private readonly logger = new Logger(DomainService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
+
+  // FR-02: Tenant Admin menambahkan domain baru. Sistem generate token verifikasi TXT
+  // dan langsung siapkan rekomendasi DNS (FR-03) supaya user tidak perlu tunggu verifikasi
+  // selesai dulu baru dapat rekomendasi MX/SPF/DKIM/DMARC.
+  async create(dto: CreateDomainDto) {
+    const existing = await this.prisma.domain.findUnique({
+      where: { domainName: dto.domainName },
+    });
+    if (existing) {
+      throw new ConflictException(`Domain ${dto.domainName} sudah terdaftar`);
+    }
+
+    const verificationToken = randomBytes(16).toString('hex');
+    const dkim = generateDkimKeyPair();
+
+    const domain = await this.prisma.domain.create({
+      data: {
+        tenantId: dto.tenantId,
+        domainName: dto.domainName,
+        verificationStatus: 'pending',
+        verificationToken,
+        mxRecord: buildMxRecord(
+          this.config.get<string>('MAIL_ENGINE_MX_HOST', 'mail.example.com'),
+          Number(this.config.get<string>('MAIL_ENGINE_MX_PRIORITY', '10')),
+        ),
+        spfRecord: buildSpfRecord(this.config.get<string>('OUTBOUND_RELAY_HOST')),
+        dmarcRecord: buildDmarcRecord(dto.domainName),
+        dkimSelector: dkim.selector,
+        dkimPublicKey: dkim.publicKeyRecord,
+        dkimPrivateKey: dkim.privateKeyPem,
+      },
+    });
+
+    // Hand-off private key ke direktori mail-engine. Kegagalan filesystem (mis. dev tanpa
+    // mail-engine ter-clone di sebelahnya) tidak boleh menggagalkan pembuatan domain di DB —
+    // hand-off bisa diulang manual lewat operasi terpisah nanti.
+    try {
+      await writeDkimKeyToMailEngine({
+        keysDir: this.config.get<string>('DKIM_KEYS_DIR', '../../mail-engine/config/opendkim/keys'),
+        domainName: dto.domainName,
+        selector: dkim.selector,
+        privateKeyPem: dkim.privateKeyPem,
+        publicKeyRecord: dkim.publicKeyRecord,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Gagal menulis DKIM key ke mail-engine untuk domain ${dto.domainName}: ${(err as Error).message}`,
+      );
+    }
+
+    return domain;
+  }
+
+  findAllByTenant(tenantId: string) {
+    return this.prisma.domain.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOneOrThrow(id: string) {
+    const domain = await this.prisma.domain.findUnique({ where: { id } });
+    if (!domain) {
+      throw new NotFoundException(`Domain ${id} tidak ditemukan`);
+    }
+    return domain;
+  }
+
+  // Kartu instruksi TXT record yang harus dipasang user sebelum verifikasi (bagian dari FR-02/FR-03 UI flow)
+  async getVerificationInstructions(id: string) {
+    const domain = await this.findOneOrThrow(id);
+    const prefix = this.config.get<string>('DOMAIN_VERIFICATION_TXT_PREFIX', 'sendagomail-verify');
+    return {
+      recordType: 'TXT',
+      host: domain.domainName,
+      value: `${prefix}=${domain.verificationToken}`,
+    };
+  }
+
+  // FR-02 & FR-04: cek TXT record ke DNS publik, update status pending/verified/failed real-time.
+  async verify(id: string) {
+    const domain = await this.findOneOrThrow(id);
+    const prefix = this.config.get<string>('DOMAIN_VERIFICATION_TXT_PREFIX', 'sendagomail-verify');
+
+    const isVerified = await verifyDomainTxtRecord(
+      domain.domainName,
+      prefix,
+      domain.verificationToken,
+    );
+
+    return this.prisma.domain.update({
+      where: { id },
+      data: {
+        verificationStatus: isVerified ? 'verified' : 'failed',
+        verifiedAt: isVerified ? new Date() : null,
+      },
+    });
+  }
+
+  // FR-04: status verifikasi domain, dipoll dari frontend
+  async getStatus(id: string) {
+    const domain = await this.findOneOrThrow(id);
+    return { id: domain.id, verificationStatus: domain.verificationStatus };
+  }
+
+  // Rekomendasi DNS record siap-copy untuk ditampilkan di UI (FR-03), tanpa expose private key DKIM
+  async getDnsRecords(id: string) {
+    const domain = await this.findOneOrThrow(id);
+    return {
+      mx: domain.mxRecord,
+      spf: domain.spfRecord,
+      dmarc: domain.dmarcRecord,
+      dkim: domain.dkimPublicKey
+        ? {
+            host: `${domain.dkimSelector}._domainkey.${domain.domainName}`,
+            value: domain.dkimPublicKey,
+          }
+        : null,
+    };
+  }
+
+  async remove(id: string) {
+    await this.findOneOrThrow(id);
+    return this.prisma.domain.delete({ where: { id } });
+  }
+}

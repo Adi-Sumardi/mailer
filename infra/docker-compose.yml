@@ -1,0 +1,120 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sendagomail
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: [sendagomail]
+
+  auth-service:
+    build: ../services/auth-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://sendagomail:${POSTGRES_PASSWORD}@postgres:5432/auth?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 1h
+      REFRESH_TOKEN_DAYS: 30
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      MAIL_APP_SERVICE_URL: http://mail-app-service:3002
+      DOMAIN_PROVISIONING_SERVICE_URL: http://domain-provisioning:3001
+      PORT: 3000
+    depends_on: [postgres]
+    ports: ["18000:3000"]
+    networks: [sendagomail]
+
+  domain-provisioning:
+    build: ../services/domain-provisioning
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://sendagomail:${POSTGRES_PASSWORD}@postgres:5432/domain_provisioning?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      DKIM_KEYS_DIR: /app/dkim-keys
+      DOMAIN_VERIFICATION_TXT_PREFIX: sendagomail-verify
+      MAIL_ENGINE_MX_HOST: mail.sendagomail.adilabs.id
+      MAIL_ENGINE_MX_PRIORITY: 10
+      PORT: 3001
+    volumes:
+      - dkim-keys:/app/dkim-keys
+    depends_on: [postgres]
+    ports: ["18001:3001"]
+    networks: [sendagomail]
+
+  mail-app-service:
+    build: ../services/mail-app-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://sendagomail:${POSTGRES_PASSWORD}@postgres:5432/mail_app?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      DEFAULT_RECALL_WINDOW_SECONDS: 20
+      MAX_ATTACHMENT_SIZE_KB: 25600
+      PORT: 3002
+    depends_on: [postgres]
+    ports: ["18002:3002"]
+    networks: [sendagomail]
+
+  calendar-task-service:
+    build: ../services/calendar-task-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://sendagomail:${POSTGRES_PASSWORD}@postgres:5432/calendar_task?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3003
+    depends_on: [postgres]
+    ports: ["18003:3003"]
+    networks: [sendagomail]
+
+  automation-engine:
+    build: ../services/automation-engine
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://sendagomail:${POSTGRES_PASSWORD}@postgres:5432/automation?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3004
+    depends_on: [postgres]
+    ports: ["18004:3004"]
+    networks: [sendagomail]
+
+  api-gateway:
+    build: ../services/api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      AUTH_SERVICE_URL: http://auth-service:3000
+      DOMAIN_PROVISIONING_SERVICE_URL: http://domain-provisioning:3001
+      MAIL_APP_SERVICE_URL: http://mail-app-service:3002
+      CALENDAR_TASK_SERVICE_URL: http://calendar-task-service:3003
+      AUTOMATION_ENGINE_URL: http://automation-engine:3004
+      CORS_ORIGIN: https://sendagomail.adilabs.id
+      RATE_LIMIT_MAX: 300
+    depends_on:
+      - auth-service
+      - domain-provisioning
+      - mail-app-service
+      - calendar-task-service
+      - automation-engine
+    ports: ["18080:8080"]
+    networks: [sendagomail]
+
+  web:
+    build:
+      context: ../apps/web
+      args:
+        VITE_API_GATEWAY_URL: ""
+    restart: unless-stopped
+    ports: ["18090:80"]
+    networks: [sendagomail]
+
+networks:
+  sendagomail:
+    name: sendagomail-network
+
+volumes:
+  pgdata:
+  dkim-keys:

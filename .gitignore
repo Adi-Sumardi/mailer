@@ -1,0 +1,20 @@
+# Env & secrets
+.env
+*.env.local
+**/config/opendkim/keys/
+
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Mail data (jangan pernah commit isi mailbox!)
+mail-engine/data/
+
+# OS/editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log

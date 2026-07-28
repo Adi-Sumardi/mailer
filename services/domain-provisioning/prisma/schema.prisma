@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantBillingStatus {
+  active
+  suspended
+  cancelled
+}
+
+enum DomainVerificationStatus {
+  pending
+  verified
+  failed
+}
+
+model Tenant {
+  id            String               @id @default(uuid()) @map("tenant_id")
+  tenantName    String               @map("tenant_name")
+  planType      String               @default("free") @map("plan_type")
+  billingStatus TenantBillingStatus  @default(active) @map("billing_status")
+  deactivatedAt DateTime?            @map("deactivated_at")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  domains Domain[]
+
+  @@map("tenant")
+}
+
+model Domain {
+  id     String @id @default(uuid()) @map("domain_id")
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenantId String @map("tenant_id")
+
+  domainName String @unique @map("domain_name")
+
+  verificationStatus DomainVerificationStatus @default(pending) @map("verification_status")
+  verificationToken  String                    @map("verification_token")
+  verifiedAt         DateTime?                 @map("verified_at")
+
+  // Rekomendasi DNS record auto-generated (FR-03), disimpan agar konsisten ditampilkan ke user
+  mxRecord    String? @map("mx_record")
+  spfRecord   String? @map("spf_record")
+  dkimSelector String? @map("dkim_selector")
+  dkimPublicKey String? @map("dkim_public_key")
+  dkimPrivateKey String? @map("dkim_private_key") // dipakai mail-engine (Rspamd) untuk signing, bukan ditampilkan ke user
+  dmarcRecord String? @map("dmarc_record")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("domain")
+}

@@ -1,0 +1,43 @@
+# Mail Engine — SendagoMail
+# Berbasis docker-mailserver (Postfix + Dovecot + Rspamd + ClamAV)
+# Dokumentasi lengkap: https://docker-mailserver.github.io/docker-mailserver/latest/
+#
+# CATATAN PENTING sebelum `docker compose up`:
+# 1. Isi file .env (copy dari .env.example)
+# 2. Pastikan VPS/server mendukung port 25 outbound (lihat BRD bagian 9 — Risiko Bisnis)
+# 3. Setting DNS record (MX, SPF, DKIM, DMARC, PTR) sesuai domain di .env
+
+services:
+  mailserver:
+    image: docker.io/mailserver/docker-mailserver:latest
+    container_name: sendagomail-mailserver
+    hostname: ${MAIL_HOSTNAME}
+    domainname: ${MAIL_DOMAIN}
+    env_file: .env
+    ports:
+      - "25:25"     # SMTP
+      - "143:143"   # IMAP (STARTTLS)
+      - "465:465"   # ESMTP (implicit TLS)
+      - "587:587"   # ESMTP (explicit TLS) — submission port, dipakai untuk relay/outbound
+      - "993:993"   # IMAP (implicit TLS)
+    volumes:
+      - ./data/mail-data/:/var/mail/
+      - ./data/mail-state/:/var/mail-state/
+      - ./data/mail-logs/:/var/log/mail/
+      - ./config/:/tmp/docker-mailserver/
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    stop_grace_period: 1m
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: "ss --listening --tcp | grep -P 'LISTEN.+:smtp' || exit 1"
+      timeout: 3s
+      retries: 5
+
+  # Rspamd & ClamAV sudah include di dalam image docker-mailserver di atas.
+  # Tambahkan service terpisah di sini kalau nanti mau scale-out komponen anti-spam secara independen.
+
+networks:
+  default:
+    name: sendagomail-mail-network

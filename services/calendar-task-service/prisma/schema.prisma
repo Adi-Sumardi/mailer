@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+model CalendarEvent {
+  id     String @id @default(uuid()) @map("event_id")
+  userId String @map("user_id")
+
+  title    String
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  location  String?
+
+  // FR-13: aturan recurring disimpan mentah dalam format RRULE (RFC 5545), mis.
+  // "FREQ=WEEKLY;BYDAY=MO". Expansion jadi occurrence individual belum diimplementasikan
+  // di sini — jadi tanggung jawab client/UI untuk fase ini.
+  recurrenceRule String? @map("recurrence_rule")
+
+  // FR-14: reminder dikirim X menit sebelum acara. Pengiriman notifikasi sesungguhnya
+  // di luar scope service ini (lihat Notification Service di architecture_diagram.png).
+  reminderMinutesBefore Int? @map("reminder_minutes_before")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("calendar_event")
+}
+
+model Task {
+  id     String @id @default(uuid()) @map("task_id")
+  userId String @map("user_id")
+
+  title    String
+  dueDate  DateTime?    @map("due_date")
+  priority TaskPriority @default(medium)
+  status   TaskStatus   @default(todo)
+
+  // FR-18: convert email jadi tugas — referensi id email di mail-app-service.
+  // Tidak ada FK lintas database; tidak divalidasi ke mail-app-service (lihat README).
+  linkedEmailId String? @map("linked_email_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("task")
+}
