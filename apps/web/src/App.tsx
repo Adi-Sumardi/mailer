@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
+import RoleRoute from './routes/RoleRoute';
 import AppLayout from './components/AppLayout';
 import LoginPage from './routes/LoginPage';
 import RegisterPage from './routes/RegisterPage';
@@ -8,6 +9,27 @@ import InboxPage from './routes/InboxPage';
 import CalendarPage from './routes/CalendarPage';
 import TasksPage from './routes/TasksPage';
 import AutomationRulesPage from './routes/AutomationRulesPage';
+import TenantsPage from './routes/admin/TenantsPage';
+import DomainsPage from './routes/admin/DomainsPage';
+import IntegrationSettingsPage from './routes/admin/IntegrationSettingsPage';
+
+// Redirect default ("/") ke halaman pertama yang relevan untuk role user yang login —
+// super_admin tidak punya mailbox, jadi tidak boleh diarahkan ke /inbox (lihat bug 500
+// yang pernah terjadi sebelum ini ada).
+function HomeRedirect() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="page-loading">Memuat…</div>;
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const target =
+    user.role === 'super_admin' ? '/admin/tenants' : user.role === 'tenant_admin' ? '/admin/domains' : '/inbox';
+  return <Navigate to={target} replace />;
+}
 
 function App() {
   return (
@@ -19,15 +41,28 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route path="/inbox" element={<InboxPage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/tasks" element={<TasksPage />} />
-              <Route path="/automation-rules" element={<AutomationRulesPage />} />
+              <Route element={<RoleRoute allow={['end_user']} />}>
+                <Route path="/inbox" element={<InboxPage />} />
+              </Route>
+              <Route element={<RoleRoute allow={['end_user', 'tenant_admin']} />}>
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/automation-rules" element={<AutomationRulesPage />} />
+              </Route>
+              <Route element={<RoleRoute allow={['super_admin']} />}>
+                <Route path="/admin/tenants" element={<TenantsPage />} />
+              </Route>
+              <Route element={<RoleRoute allow={['super_admin', 'tenant_admin']} />}>
+                <Route path="/admin/domains" element={<DomainsPage />} />
+              </Route>
+              <Route element={<RoleRoute allow={['tenant_admin']} />}>
+                <Route path="/admin/integrations" element={<IntegrationSettingsPage />} />
+              </Route>
             </Route>
           </Route>
 
-          <Route path="/" element={<Navigate to="/inbox" replace />} />
-          <Route path="*" element={<Navigate to="/inbox" replace />} />
+          <Route path="/" element={<HomeRedirect />} />
+          <Route path="*" element={<HomeRedirect />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

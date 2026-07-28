@@ -53,3 +53,49 @@ export interface AutomationRule {
   actionValue: string | null;
   isActive: boolean;
 }
+
+export interface Tenant {
+  id: string;
+  tenantName: string;
+  planType: string;
+  billingStatus: 'active' | 'suspended' | 'cancelled';
+  deactivatedAt: string | null;
+  createdAt: string;
+}
+
+export interface Domain {
+  id: string;
+  tenantId: string;
+  domainName: string;
+  verificationStatus: 'pending' | 'verified' | 'failed';
+  verificationToken: string;
+  mxRecord: string | null;
+  spfRecord: string | null;
+  dkimSelector: string | null;
+  dkimPublicKey: string | null;
+  dmarcRecord: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+}
+
+export interface DnsRecords {
+  mx: string | null;
+  spf: string | null;
+  dmarc: string | null;
+  dkim: { host: string; value: string } | null;
+}
+
+export interface ApiCredential {
+  id: string;
+  name: string;
+  environment: 'sandbox' | 'production';
+  memberId: string;
+  dailyEmailLimit: number;
+  emailsSentToday: number;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
+export interface ApiCredentialWithSecret extends ApiCredential {
+  secret: string;
+}

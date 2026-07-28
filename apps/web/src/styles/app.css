@@ -463,6 +463,90 @@ select:focus {
   color: var(--color-error);
 }
 
+.badge-success {
+  background: var(--color-success-container);
+  color: var(--color-success);
+}
+
+/* ===== Admin (Tenant/Domain management) ===== */
+.sidebar-role-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary-accent);
+  background: var(--color-error-container);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  margin-bottom: var(--space-xs);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-outline);
+  font-size: 14px;
+}
+
+.admin-table th {
+  background: var(--color-surface-container);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-on-surface-variant);
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.domain-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.domain-detail {
+  background: var(--color-surface-container);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.dns-record-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.dns-record-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  margin-bottom: 4px;
+}
+
+.dns-record-card code {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  word-break: break-all;
+}
+
 .email-detail {
   flex: 1;
   padding: var(--space-lg);
@@ -646,4 +730,56 @@ select:focus {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
+}
+
+/* ===== Integration credentials ===== */
+.credential-reveal {
+  background: var(--color-on-surface);
+  color: white;
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.credential-reveal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  font-size: 14px;
+}
+
+.credential-reveal-header .btn-ghost {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  flex-shrink: 0;
+}
+
+.credential-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.credential-field span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.credential-field code {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  word-break: break-all;
+}
+
+.admin-table code {
+  font-family: var(--font-mono);
+  font-size: 13px;
 }

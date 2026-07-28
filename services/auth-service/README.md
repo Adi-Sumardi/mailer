@@ -28,6 +28,16 @@ npm run start:dev
 | POST | `/auth/logout` | Revoke `refreshToken` (sesi tidak bisa diperpanjang lagi lewat token itu) |
 | GET | `/auth/me` | Profil user dari token yang sedang login (butuh `Authorization: Bearer`) |
 
+### API Credential — integrasi aplikasi eksternal (member_id/secret)
+| Method | Path | Keterangan |
+|---|---|---|
+| POST | `/auth/api-credentials` | **Khusus `tenant_admin`.** Buat credential baru (`{name, environment: 'sandbox'\|'production'}`). Mengembalikan `memberId` + `secret` mentah **sekali saja** — setelah ini cuma hash yang disimpan. |
+| GET | `/auth/api-credentials` | List credential milik tenant sendiri (tanpa secret) |
+| DELETE | `/auth/api-credentials/:id` | Revoke credential |
+| POST | `/auth/api-credentials/validate` | **Publik, bukan JWT** — otentikasi pakai `{memberId, secret}` di body. Mengecek validitas + mengonsumsi kuota harian, mengembalikan `{valid, remainingQuota}` atau `{valid: false, reason}`. |
+
+**Sandbox vs Production:** sandbox selalu gratis tapi dibatasi **50 email/hari** (hardcoded). Production pakai limit default **5000/hari** — ini **placeholder**, belum benar-benar terhubung ke paket berlangganan tenant (FR-25 belum jadi sistem billing sungguhan, `Tenant.planType` di `domain-provisioning` baru string `free`/dst tanpa definisi paket formal). Kuota reset otomatis per hari (UTC).
+
 ## Kontrak Token (dikonsumsi service lain)
 
 ```json
@@ -58,7 +68,7 @@ npm test              # unit test murni (belum ada — semua logic terhubung ke 
 npm run test:e2e       # integration test end-to-end lewat HTTP, butuh PostgreSQL nyata
 ```
 
-`test:e2e` (17 test) menembak HTTP endpoint sungguhan terhadap database PostgreSQL nyata: register per role, validasi `tenantId` wajib + validasi silang (mocked true/false) ke `domain-provisioning`, email duplikat, provisioning mailbox (mocked & graceful-degradation saat `mail-app-service` unreachable), login (isi payload JWT), `GET /auth/me`, **refresh token (rotasi, replay lama ditolak), logout (revoke)**. Contoh setup:
+`test:e2e` (31 test) menembak HTTP endpoint sungguhan terhadap database PostgreSQL nyata: register per role, validasi `tenantId` wajib + validasi silang (mocked true/false) ke `domain-provisioning`, email duplikat, provisioning mailbox (mocked & graceful-degradation saat `mail-app-service` unreachable), login (isi payload JWT), `GET /auth/me`, refresh token (rotasi, replay lama ditolak), logout (revoke), dan **API credential** (create per environment, limit sandbox vs production, validate+consume kuota, reset harian, revoke, isolasi antar tenant). Contoh setup:
 
 ```bash
 docker run -d --name sendagomail-auth-test-pg \
@@ -79,7 +89,10 @@ DATABASE_URL="postgresql://sendagomail:sendagomail@localhost:55432/sendagomail_a
 - [x] Provisioning mailbox otomatis untuk end_user (panggil `mail-app-service`, diproteksi internal API key, graceful degradation)
 - [x] Refresh token dengan rotasi + logout (revoke)
 - [x] Validasi silang `tenantId` ke `domain-provisioning` (diproteksi internal API key, fail-closed/fail-open sesuai skenario)
-- [x] Test integrasi end-to-end dengan database PostgreSQL nyata (17 test)
+- [x] Test integrasi end-to-end dengan database PostgreSQL nyata (31 test)
+- [x] API Credential (member_id/secret) dengan environment sandbox/production + kuota harian
 - [ ] Ganti panggilan HTTP polos ke service lain dengan lewat API Gateway atau message queue
 - [ ] Ganti shared-secret `JWT_SECRET`/`INTERNAL_API_KEY` manual dengan JWKS/mTLS begitu ada API Gateway/service mesh
 - [ ] Integrasi dengan API Gateway
+- [ ] Wiring nyata: `mail-app-service` memanggil `POST /auth/api-credentials/validate` sebelum mengizinkan kirim email lewat API eksternal (endpoint sudah jalan & teruji, belum ada pemanggil sungguhan)
+- [ ] Kuota production benar-benar ditarik dari paket berlangganan tenant begitu FR-25 (billing) dibangun — saat ini hardcoded 5000/hari
