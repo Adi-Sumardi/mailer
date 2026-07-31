@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as dns from 'dns';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailboxService } from '../mailbox/mailbox.service';
@@ -18,6 +19,9 @@ import { ComposeEmailDto } from './dto/compose-email.dto';
 import { UpdateFlagsDto } from './dto/update-flags.dto';
 import { SearchEmailDto } from './dto/search-email.dto';
 import { AddAttachmentDto } from './dto/add-attachment.dto';
+
+const LOGO_PATH = path.join(__dirname, 'assets', 'adilabs-logo.png');
+const LOGO_CID = 'adilabs-logo';
 
 @Injectable()
 export class EmailService implements OnModuleInit, OnModuleDestroy {
@@ -29,6 +33,31 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     private readonly mailboxService: MailboxService,
     private readonly config: ConfigService,
   ) {}
+
+  // Footer branding di setiap email yang dikirim keluar — logo dilampirkan sebagai
+  // inline attachment (Content-ID), BUKAN base64 di dalam <img src>, karena banyak klien
+  // email (termasuk Gmail) memblokir/menghapus data-URI base64 di HTML email.
+  private buildBrandedHtml(bodyText: string): string {
+    const escapedBody = bodyText.replace(/\n/g, '<br/>');
+    return `
+      <div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
+        ${escapedBody}
+      </div>
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-family: sans-serif;">
+        <img src="cid:${LOGO_CID}" alt="adilabs" style="height: 24px; width: auto;" />
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+          Dikirim lewat SendagoMail — produk adilabs
+        </div>
+      </div>
+    `;
+  }
+
+  private getLogoAttachment() {
+    if (!fs.existsSync(LOGO_PATH)) {
+      return null;
+    }
+    return { filename: 'adilabs-logo.png', path: LOGO_PATH, cid: LOGO_CID };
+  }
 
   private getTransporter() {
     const host = this.config.get<string>('SMTP_HOST');
@@ -229,13 +258,15 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
           content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
         };
       });
+      const logoAttachment = this.getLogoAttachment();
+      if (logoAttachment) attachmentList.push(logoAttachment);
 
       await mxTransporter.sendMail({
         from: email.fromAddr,
         to: email.toAddr,
         subject: email.subject,
         text: email.body,
-        html: `<div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6;">${email.body.replace(/\n/g, '<br/>')}</div>`,
+        html: this.buildBrandedHtml(email.body),
         attachments: attachmentList,
       });
 
@@ -283,13 +314,15 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
               content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
             };
           });
+          const logoAttachment = this.getLogoAttachment();
+          if (logoAttachment) attachmentList.push(logoAttachment);
 
           await transporter.sendMail({
             from: email.fromAddr,
             to: email.toAddr,
             subject: email.subject,
             text: email.body,
-            html: `<div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6;">${email.body.replace(/\n/g, '<br/>')}</div>`,
+            html: this.buildBrandedHtml(email.body),
             attachments: attachmentList,
           });
           this.logger.log(`Email ${email.id} successfully sent via SMTP Transport to ${email.toAddr}`);
