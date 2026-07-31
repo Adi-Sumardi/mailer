@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api, ApiError } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
-import type { Domain, DnsRecords } from '../../lib/types';
+import type { Domain, DnsRecords, Tenant } from '../../lib/types';
 
 const STATUS_LABEL: Record<Domain['verificationStatus'], string> = {
   pending: 'Menunggu Verifikasi',
@@ -21,6 +21,9 @@ export default function DomainsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [txtInstruction, setTxtInstruction] = useState<{ recordType: string; host: string; value: string } | null>(null);
   const [dnsRecords, setDnsRecords] = useState<DnsRecords | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<Tenant | null>(null);
+  const [copiedId, setCopiedId] = useState(false);
 
   async function loadDomains() {
     if (!tenantId) return;
@@ -29,6 +32,17 @@ export default function DomainsPage() {
 
   useEffect(() => {
     loadDomains().catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat domain.'));
+    if (tenantId) {
+      api.get<Tenant>(`/tenants/${tenantId}`)
+        .then((t) => {
+          setTenantName(t.tenantName);
+          setTenantInfo(t);
+        })
+        .catch(() => {
+          setTenantName(null);
+          setTenantInfo(null);
+        });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
@@ -89,8 +103,78 @@ export default function DomainsPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Manajemen Domain</h1>
+        <div>
+          {user?.role === 'super_admin' && (
+            <Link
+              to="/admin/tenants"
+              style={{ fontSize: 13, color: 'var(--color-on-surface-variant)', textDecoration: 'none', display: 'block', marginBottom: 4 }}
+            >
+              ← Manajemen Tenant
+            </Link>
+          )}
+          <h1>
+            Manajemen Domain
+            {tenantName && (
+              <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--color-on-surface-variant)', marginLeft: 10 }}>
+                — {tenantName}
+              </span>
+            )}
+          </h1>
+        </div>
       </div>
+
+      {tenantInfo && (
+        <div style={{
+          marginBottom: '24px',
+          background: 'var(--color-surface-variant)',
+          border: '1px solid var(--color-outline-variant)',
+          borderRadius: '12px',
+          padding: '16px 20px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--color-on-surface)' }}>
+              🏢 Informasi Akun & Tenant
+            </h3>
+            <span className={`badge badge-${tenantInfo.billingStatus === 'active' ? 'success' : 'pending'}`}>
+              {tenantInfo.billingStatus === 'active' ? 'Aktif' : tenantInfo.billingStatus}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div>
+              <span style={{ fontSize: '12px', color: 'var(--color-on-surface-variant)', display: 'block', marginBottom: '4px' }}>Nama Tenant</span>
+              <strong style={{ fontSize: '14px' }}>{tenantInfo.tenantName}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: '12px', color: 'var(--color-on-surface-variant)', display: 'block', marginBottom: '4px' }}>Tenant ID (untuk Register & API)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <code style={{ fontSize: '12px', background: 'var(--color-surface)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--color-outline-variant)' }}>
+                  {tenantInfo.id}
+                </code>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ padding: '2px 8px', fontSize: '12px' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(tenantInfo.id);
+                    setCopiedId(true);
+                    setTimeout(() => setCopiedId(false), 2000);
+                  }}
+                >
+                  {copiedId ? '✓ Tersalin' : '📋 Salin'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <span style={{ fontSize: '12px', color: 'var(--color-on-surface-variant)', display: 'block', marginBottom: '4px' }}>Paket</span>
+              <strong style={{ fontSize: '14px', textTransform: 'capitalize' }}>{tenantInfo.planType || 'Standard'}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: '12px', color: 'var(--color-on-surface-variant)', display: 'block', marginBottom: '4px' }}>Dibuat Pada</span>
+              <span style={{ fontSize: '14px' }}>{new Date(tenantInfo.createdAt).toLocaleDateString('id-ID')}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <form className="inline-form" onSubmit={handleCreate}>
         <label>

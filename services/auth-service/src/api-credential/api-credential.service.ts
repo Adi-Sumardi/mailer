@@ -31,17 +31,19 @@ export class ApiCredentialService {
     return { ...this.toPublic(credential), secret };
   }
 
-  async findAll(tenantId: string) {
+  async findAll(tenantId: string | null) {
     const credentials = await this.prisma.apiCredential.findMany({
-      where: { tenantId },
+      // tenantId null = super_admin → list semua credential tanpa filter
+      where: tenantId ? { tenantId } : undefined,
       orderBy: { createdAt: 'desc' },
     });
     return credentials.map((c) => this.toPublic(c));
   }
 
-  async revoke(tenantId: string, id: string) {
+  async revoke(tenantId: string | null, id: string) {
     const credential = await this.prisma.apiCredential.findUnique({ where: { id } });
-    if (!credential || credential.tenantId !== tenantId) {
+    // tenantId null = super_admin → skip validasi kepemilikan tenant
+    if (!credential || (tenantId && credential.tenantId !== tenantId)) {
       throw new NotFoundException(`API credential ${id} tidak ditemukan`);
     }
     if (credential.revokedAt) {
@@ -106,6 +108,7 @@ export class ApiCredentialService {
 
   private toPublic(credential: {
     id: string;
+    tenantId: string;
     name: string;
     environment: string;
     memberId: string;
@@ -114,8 +117,8 @@ export class ApiCredentialService {
     createdAt: Date;
     revokedAt: Date | null;
   }) {
-    const { id, name, environment, memberId, dailyEmailLimit, emailsSentToday, createdAt, revokedAt } =
+    const { id, tenantId, name, environment, memberId, dailyEmailLimit, emailsSentToday, createdAt, revokedAt } =
       credential;
-    return { id, name, environment, memberId, dailyEmailLimit, emailsSentToday, createdAt, revokedAt };
+    return { id, tenantId, name, environment, memberId, dailyEmailLimit, emailsSentToday, createdAt, revokedAt };
   }
 }

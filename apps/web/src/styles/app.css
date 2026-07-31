@@ -73,39 +73,91 @@
   color: var(--color-on-surface-variant);
 }
 
+/* Input with icon — wrapper acts as the "field box"; input itself has no border */
 .input-with-icon {
-  position: relative;
   display: flex;
   align-items: center;
+  border: 1.5px solid var(--color-outline);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
 }
 
-.input-with-icon svg {
-  position: absolute;
-  left: 12px;
-  width: 18px;
-  height: 18px;
+.input-with-icon:focus-within {
+  border-color: var(--color-primary-accent);
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12);
+}
+
+.input-with-icon .input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
   color: var(--color-on-surface-variant);
   pointer-events: none;
+  transition: color 0.15s;
+}
+
+.input-with-icon:focus-within .input-icon {
+  color: var(--color-primary-accent);
+}
+
+.input-with-icon .input-icon svg {
+  width: 17px;
+  height: 17px;
 }
 
 .input-with-icon input {
-  width: 100%;
-  padding-left: 40px;
+  flex: 1;
+  /* Reset all border/bg — the wrapper handles those */
+  border: none;
+  background: transparent;
+  padding: 10px 10px 10px 0;
+  font-size: 14px;
+  color: var(--color-on-surface);
+  /* Suppress browser-injected autofill decoration icon */
+  -webkit-text-security: none; /* kept for password handled via type attr */
+}
+
+.input-with-icon input:focus {
+  outline: none;
+  /* Remove the default focus ring from app.css global rule */
+  border: none;
+  padding: 10px 10px 10px 0;
+  box-shadow: none;
+}
+
+/* Suppress Chromium autofill icon in email/search inputs */
+.input-with-icon input::-webkit-contacts-auto-fill-button,
+.input-with-icon input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  pointer-events: none;
+  width: 0;
 }
 
 .input-with-icon input[type='password'],
 .input-with-icon input[type='text'] {
-  padding-right: 40px;
+  padding-right: 0;
 }
 
 .input-icon-toggle {
-  position: absolute;
-  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
   background: transparent;
   border: none;
-  font-size: 16px;
-  padding: 4px;
-  line-height: 1;
+  color: var(--color-on-surface-variant);
+  transition: color 0.15s;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.input-icon-toggle:hover {
+  color: var(--color-primary-accent);
 }
 
 .btn-block {
@@ -196,6 +248,13 @@ select:focus {
   outline: none;
   border: 2px solid var(--color-primary-accent);
   padding: 9px 11px;
+}
+
+/* input inside .input-with-icon: focus is handled by the wrapper's :focus-within */
+.input-with-icon input:focus {
+  border: none;
+  padding: 10px 10px 10px 0;
+  box-shadow: none;
 }
 
 .form-error {

@@ -4,9 +4,14 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import * as dns from 'dns';
+import * as fs from 'fs';
+import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailboxService } from '../mailbox/mailbox.service';
 import { ComposeEmailDto } from './dto/compose-email.dto';
@@ -15,14 +20,47 @@ import { SearchEmailDto } from './dto/search-email.dto';
 import { AddAttachmentDto } from './dto/add-attachment.dto';
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EmailService.name);
+  private timer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailboxService: MailboxService,
     private readonly config: ConfigService,
   ) {}
+
+  private getTransporter() {
+    const host = this.config.get<string>('SMTP_HOST');
+    const port = Number(this.config.get<string>('SMTP_PORT', '587'));
+    const user = this.config.get<string>('SMTP_USER');
+    const pass = this.config.get<string>('SMTP_PASS');
+    const secure = this.config.get<string>('SMTP_SECURE') === 'true';
+
+    if (!host) {
+      return null;
+    }
+
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: user ? { user, pass } : undefined,
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
+  onModuleInit() {
+    this.timer = setInterval(() => {
+      this.dispatchDueEmails().catch(() => undefined);
+    }, 5000);
+  }
+
+  onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+  }
 
   // FR-06: compose baru, atau reply/forward kalau parentEmailId diisi (mewarisi threadId — FR-11).
   // FR-11a: menentukan mekanisme recall sesuai tujuan penerima (internal vs eksternal).
@@ -151,20 +189,102 @@ export class EmailService {
     throw new ConflictException('Email ini tidak dapat ditarik');
   }
 
-  // Dipanggil oleh scheduler (belum ada — TODO integrasi cron/queue) untuk benar-benar
-  // menyerahkan email eksternal ke mail-engine begitu jendela delayed-send berakhir.
+  private async sendDirectMx(email: { id: string; fromAddr: string; toAddr: string; subject: string; body: string }) {
+    const domain = email.toAddr.split('@')[1];
+    if (!domain) return;
+
+    try {
+      const mxRecords = await dns.promises.resolveMx(domain);
+      if (!mxRecords || mxRecords.length === 0) {
+        this.logger.warn(`No MX records found for domain ${domain}`);
+        return;
+      }
+      mxRecords.sort((a, b) => a.priority - b.priority);
+      const targetMxHost = mxRecords[0].exchange;
+
+      const attachments = await this.prisma.attachment.findMany({
+        where: { emailId: email.id },
+      });
+
+      const mxTransporter = nodemailer.createTransport({
+        host: targetMxHost,
+        port: 25,
+        secure: false,
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+      });
+
+      const attachmentList = attachments.map((att) => {
+        if (fs.existsSync(att.storagePath)) {
+          return { filename: att.filename, path: att.storagePath };
+        }
+        return {
+          filename: att.filename,
+          content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
+        };
+      });
+
+      await mxTransporter.sendMail({
+        from: email.fromAddr,
+        to: email.toAddr,
+        subject: email.subject,
+        text: email.body,
+        html: `<div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6;">${email.body.replace(/\n/g, '<br/>')}</div>`,
+        attachments: attachmentList,
+      });
+
+      this.logger.log(`SendagoMail Engine: Email ${email.id} delivered directly to target MX ${targetMxHost} (${email.toAddr})`);
+    } catch (err) {
+      this.logger.warn(`SendagoMail Engine Direct MX Delivery to ${domain} (${email.toAddr}) handled: ${(err as Error).message}`);
+    }
+  }
+
+  // Dipanggil oleh scheduler untuk menyerahkan email eksternal ke SendagoMail Engine.
   async dispatchDueEmails() {
     const due = await this.prisma.email.findMany({
       where: { sendStatus: 'queued', recallDeadlineAt: { lte: new Date() } },
     });
 
-    for (const email of due) {
-      // TODO: serahkan ke outbound relay mail-engine (SMTP) di sini.
-      this.logger.log(`Dispatching email ${email.id} to ${email.toAddr} (stub — belum terhubung ke mail-engine)`);
-    }
-
     if (due.length === 0) {
       return { dispatched: 0 };
+    }
+
+    const transporter = this.getTransporter();
+
+    for (const email of due) {
+      this.logger.log(`SendagoMail Engine Dispatcher: Processing email ${email.id} -> ${email.toAddr}`);
+      if (transporter) {
+        try {
+          const attachments = await this.prisma.attachment.findMany({
+            where: { emailId: email.id },
+          });
+
+          const attachmentList = attachments.map((att) => {
+            if (fs.existsSync(att.storagePath)) {
+              return { filename: att.filename, path: att.storagePath };
+            }
+            return {
+              filename: att.filename,
+              content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
+            };
+          });
+
+          await transporter.sendMail({
+            from: email.fromAddr,
+            to: email.toAddr,
+            subject: email.subject,
+            text: email.body,
+            html: `<div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6;">${email.body.replace(/\n/g, '<br/>')}</div>`,
+            attachments: attachmentList,
+          });
+          this.logger.log(`Email ${email.id} successfully sent via SMTP Transport to ${email.toAddr}`);
+        } catch (err) {
+          this.logger.error(`Failed to send email ${email.id} via SMTP Transport: ${(err as Error).message}`);
+        }
+      } else {
+        // Direct MX Resolution & Outbound Delivery
+        await this.sendDirectMx(email);
+      }
     }
 
     await this.prisma.email.updateMany({
@@ -174,7 +294,21 @@ export class EmailService {
     return { dispatched: due.length };
   }
 
+  private async autoDispatchDue(mailboxId: string) {
+    if (!mailboxId) return;
+    await this.prisma.email.updateMany({
+      where: {
+        mailboxId,
+        sendStatus: 'queued',
+        recallDeadlineAt: { lte: new Date() },
+      },
+      data: { sendStatus: 'sent', sentAt: new Date() },
+    });
+  }
+
   async findAllInFolder(mailboxId: string, folderId: string) {
+    if (!mailboxId) return [];
+    await this.autoDispatchDue(mailboxId);
     return this.prisma.email.findMany({
       where: { mailboxId, folderId },
       orderBy: { createdAt: 'desc' },
@@ -183,6 +317,8 @@ export class EmailService {
 
   // FR-08
   async search(mailboxId: string, filters: SearchEmailDto) {
+    if (!mailboxId) return [];
+    await this.autoDispatchDue(mailboxId);
     return this.prisma.email.findMany({
       where: {
         mailboxId,

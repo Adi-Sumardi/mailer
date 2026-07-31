@@ -22,6 +22,7 @@ export class FolderService {
   }
 
   findAll(mailboxId: string) {
+    if (!mailboxId) return [];
     return this.prisma.folder.findMany({
       where: { mailboxId },
       orderBy: { createdAt: 'asc' },

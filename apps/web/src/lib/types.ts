@@ -99,3 +99,22 @@ export interface ApiCredential {
 export interface ApiCredentialWithSecret extends ApiCredential {
   secret: string;
 }
+
+export interface ManagedUser {
+  id: string;
+  email: string;
+  role: 'super_admin' | 'tenant_admin' | 'end_user';
+  tenantId: string | null;
+  mailboxId: string | null;
+  createdAt: string;
+}
+
+export interface EmailAttachment {
+  id: string;
+  emailId: string;
+  filename: string;
+  sizeKb: number;
+  storagePath: string;
+  createdAt: string;
+}
+

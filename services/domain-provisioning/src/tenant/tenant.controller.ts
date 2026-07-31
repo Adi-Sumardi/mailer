@@ -37,6 +37,11 @@ export class TenantController {
     return this.tenantService.reactivate(id);
   }
 
+  @Patch(':id/plan')
+  updatePlan(@Param('id') id: string, @Body('planType') planType: string) {
+    return this.tenantService.updatePlan(id, planType);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.tenantService.remove(id);

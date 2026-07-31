@@ -20,32 +20,30 @@ export class ApiCredentialController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('tenant_admin')
+  @Roles('tenant_admin', 'super_admin')
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateApiCredentialDto) {
-    if (!user.tenantId) {
-      throw new ForbiddenException('User tidak terikat tenant manapun');
+    // super_admin tidak terikat tenant — harus sertakan tenantId di body untuk aksi ini
+    const tenantId = user.tenantId ?? (dto as any).tenantId;
+    if (!tenantId) {
+      throw new ForbiddenException('Sertakan tenantId di body untuk aksi super_admin');
     }
-    return this.apiCredentialService.create(user.tenantId, dto);
+    return this.apiCredentialService.create(tenantId, dto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('tenant_admin')
+  @Roles('tenant_admin', 'super_admin')
   @Get()
   findAll(@CurrentUser() user: JwtPayload) {
-    if (!user.tenantId) {
-      throw new ForbiddenException('User tidak terikat tenant manapun');
-    }
-    return this.apiCredentialService.findAll(user.tenantId);
+    // super_admin: list semua credential (tenantId = null → findAll tanpa filter tenant)
+    return this.apiCredentialService.findAll(user.tenantId ?? null);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('tenant_admin')
+  @Roles('tenant_admin', 'super_admin')
   @Delete(':id')
   revoke(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
-    if (!user.tenantId) {
-      throw new ForbiddenException('User tidak terikat tenant manapun');
-    }
-    return this.apiCredentialService.revoke(user.tenantId, id);
+    // super_admin: bypass validasi kepemilikan tenant
+    return this.apiCredentialService.revoke(user.tenantId ?? null, id);
   }
 }

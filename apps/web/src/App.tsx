@@ -12,6 +12,8 @@ import AutomationRulesPage from './routes/AutomationRulesPage';
 import TenantsPage from './routes/admin/TenantsPage';
 import DomainsPage from './routes/admin/DomainsPage';
 import IntegrationSettingsPage from './routes/admin/IntegrationSettingsPage';
+import UsersPage from './routes/admin/UsersPage';
+import PackagesPage from './routes/admin/PackagesPage';
 
 // Redirect default ("/") ke halaman pertama yang relevan untuk role user yang login —
 // super_admin tidak punya mailbox, jadi tidak boleh diarahkan ke /inbox (lihat bug 500
@@ -41,10 +43,10 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route element={<RoleRoute allow={['end_user']} />}>
+              <Route element={<RoleRoute allow={['end_user', 'super_admin']} />}>
                 <Route path="/inbox" element={<InboxPage />} />
               </Route>
-              <Route element={<RoleRoute allow={['end_user', 'tenant_admin']} />}>
+              <Route element={<RoleRoute allow={['end_user', 'tenant_admin', 'super_admin']} />}>
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/automation-rules" element={<AutomationRulesPage />} />
@@ -54,8 +56,10 @@ function App() {
               </Route>
               <Route element={<RoleRoute allow={['super_admin', 'tenant_admin']} />}>
                 <Route path="/admin/domains" element={<DomainsPage />} />
+                <Route path="/admin/users" element={<UsersPage />} />
+                <Route path="/admin/packages" element={<PackagesPage />} />
               </Route>
-              <Route element={<RoleRoute allow={['tenant_admin']} />}>
+              <Route element={<RoleRoute allow={['tenant_admin', 'super_admin']} />}>
                 <Route path="/admin/integrations" element={<IntegrationSettingsPage />} />
               </Route>
             </Route>

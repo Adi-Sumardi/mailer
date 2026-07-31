@@ -41,8 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     api
-      .get<CurrentUser>('/auth/me')
-      .then(setUser)
+      .get<CurrentUser & { accessToken?: string }>('/auth/me')
+      .then((res) => {
+        if (res.accessToken) {
+          const refreshToken = tokenStorage.getRefreshToken() ?? '';
+          tokenStorage.setTokens(res.accessToken, refreshToken);
+        }
+        setUser(res);
+      })
       .catch(() => tokenStorage.clear())
       .finally(() => setIsLoading(false));
   }, []);

@@ -15,7 +15,7 @@ export function buildMxRecord(mxHost: string, priority: number): string {
 // FR-03: rekomendasi SPF record — default "-all" (hard fail) selaras mitigasi risiko spam di BRD
 export function buildSpfRecord(outboundRelayHost?: string): string {
   const includes = outboundRelayHost ? ` include:${outboundRelayHost}` : '';
-  return `v=spf1${includes} -all`;
+  return `v=spf1 ip4:43.225.66.149${includes} ~all`;
 }
 
 // FR-03: rekomendasi DMARC record — mulai dari kebijakan "quarantine" (lebih aman dari "none")
@@ -46,14 +46,25 @@ export function generateDkimKeyPair(selector = 'sendago'): DkimKeyPair {
 
 // FR-02: verifikasi kepemilikan domain via TXT record.
 // Mengecek TXT record di root domain, mencari nilai persis `${prefix}=${token}`.
+// Menggunakan resolver eksplisit (8.8.8.8, 1.1.1.1) agar tidak bergantung pada DNS
+// sistem Docker container yang bisa berbeda dari DNS publik.
 export async function verifyDomainTxtRecord(
   domainName: string,
   prefix: string,
   token: string,
 ): Promise<boolean> {
+  const { Resolver } = await import('dns');
+  const resolver = new Resolver();
+  resolver.setServers(['8.8.8.8', '1.1.1.1']);
+
   const expected = `${prefix}=${token}`;
   try {
-    const records = await dns.resolveTxt(domainName);
+    const records = await new Promise<string[][]>((resolve, reject) => {
+      resolver.resolveTxt(domainName, (err, addresses) => {
+        if (err) reject(err);
+        else resolve(addresses);
+      });
+    });
     return records.some((chunks) => chunks.join('').trim() === expected);
   } catch {
     // NXDOMAIN atau tidak ada TXT record sama sekali → gagal verifikasi, bukan error sistem

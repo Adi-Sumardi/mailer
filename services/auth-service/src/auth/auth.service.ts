@@ -63,8 +63,7 @@ export class AuthService {
 
     // FR-07: end_user baru otomatis diprovisikan mailbox lewat mail-app-service.
     // Kegagalan panggilan ini tidak menggagalkan registrasi (lihat MailAppClientService).
-    const mailboxId =
-      dto.role === 'end_user' ? await this.mailAppClient.provisionMailbox(userId, dto.email) : null;
+    const mailboxId = await this.mailAppClient.provisionMailbox(userId, dto.email);
 
     const user = await this.prisma.user.create({
       data: {
@@ -95,6 +94,8 @@ export class AuthService {
       throw new UnauthorizedException('Email atau password salah');
     }
 
+    user.mailboxId = await this.ensureMailbox(user);
+
     return {
       user: this.toPublicUser(user),
       accessToken: this.issueAccessToken(user),
@@ -102,9 +103,6 @@ export class AuthService {
     };
   }
 
-  // Refresh token dirotasi setiap dipakai (old token langsung direvoke) — mengurangi dampak
-  // kalau refresh token lama bocor: sekali dipakai ulang oleh pihak tak berwenang setelah
-  // pemilik sah memakainya, token itu sudah revoked dan percobaan berikutnya akan gagal.
   async refresh(refreshToken: string) {
     const tokenHash = this.hashToken(refreshToken);
     const stored = await this.prisma.refreshToken.findUnique({
@@ -120,6 +118,8 @@ export class AuthService {
       where: { id: stored.id },
       data: { revokedAt: new Date() },
     });
+
+    stored.user.mailboxId = await this.ensureMailbox(stored.user);
 
     return {
       user: this.toPublicUser(stored.user),
@@ -142,7 +142,27 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException(`User ${id} tidak ditemukan`);
     }
-    return this.toPublicUser(user);
+    user.mailboxId = await this.ensureMailbox(user);
+    const publicUser = this.toPublicUser(user);
+    const accessToken = this.issueAccessToken(user);
+    return { ...publicUser, accessToken };
+  }
+
+  private async ensureMailbox(user: { id: string; email: string; mailboxId: string | null }): Promise<string | null> {
+    if (user.mailboxId) return user.mailboxId;
+    try {
+      const mailboxId = await this.mailAppClient.provisionMailbox(user.id, user.email);
+      if (mailboxId) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { mailboxId },
+        });
+      }
+      return mailboxId;
+    } catch (err) {
+      this.logger.warn(`Gagal provision mailbox untuk ${user.email}: ${(err as Error).message}`);
+      return null;
+    }
   }
 
   private issueAccessToken(user: {

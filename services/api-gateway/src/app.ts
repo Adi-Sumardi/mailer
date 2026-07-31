@@ -17,6 +17,7 @@ export interface GatewayConfig {
 function buildRouteTable(config: GatewayConfig): Array<{ prefix: string; target: string }> {
   return [
     { prefix: '/auth', target: config.authServiceUrl },
+    { prefix: '/users', target: config.authServiceUrl },
     { prefix: '/tenants', target: config.domainProvisioningServiceUrl },
     { prefix: '/domains', target: config.domainProvisioningServiceUrl },
     { prefix: '/mailboxes', target: config.mailAppServiceUrl },

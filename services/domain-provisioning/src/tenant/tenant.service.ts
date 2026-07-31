@@ -46,6 +46,14 @@ export class TenantService {
     });
   }
 
+  async updatePlan(id: string, planType: string) {
+    await this.findOneOrThrow(id);
+    return this.prisma.tenant.update({
+      where: { id },
+      data: { planType },
+    });
+  }
+
   // FR-01: Super Admin menghapus tenant — ditolak kalau masih ada domain terdaftar,
   // supaya tidak diam-diam menghapus mailbox/data domain yang masih aktif.
   async remove(id: string) {

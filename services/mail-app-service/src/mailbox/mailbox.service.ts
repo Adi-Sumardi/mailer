@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { FolderType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMailboxDto } from './dto/create-mailbox.dto';
@@ -37,6 +37,9 @@ export class MailboxService {
   }
 
   async findByIdOrThrow(id: string) {
+    if (!id) {
+      throw new BadRequestException('User belum memiliki mailbox. Silakan login ulang.');
+    }
     const mailbox = await this.prisma.mailbox.findUnique({ where: { id } });
     if (!mailbox) {
       throw new NotFoundException(`Mailbox ${id} tidak ditemukan`);

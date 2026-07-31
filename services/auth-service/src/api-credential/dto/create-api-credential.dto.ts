@@ -10,4 +10,8 @@ export class CreateApiCredentialDto {
   @IsOptional()
   @IsEnum(['sandbox', 'production'])
   environment?: CredentialEnvironment;
+
+  @IsOptional()
+  @IsString()
+  tenantId?: string;
 }

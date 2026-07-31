@@ -4,10 +4,18 @@ import { useAuth, type CurrentUser } from '../context/AuthContext';
 const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> = {
   super_admin: [
     { to: '/admin/tenants', label: 'Manajemen Tenant' },
-    { to: '/admin/domains', label: 'Manajemen Domain' },
+    { to: '/admin/users', label: 'Manajemen User' },
+    { to: '/admin/packages', label: 'Manajemen Paket' },
+    { to: '/admin/integrations', label: 'Integrasi Aplikasi' },
+    { to: '/inbox', label: 'Mail' },
+    { to: '/calendar', label: 'Kalender' },
+    { to: '/tasks', label: 'Tugas' },
+    { to: '/automation-rules', label: 'Automation' },
   ],
   tenant_admin: [
     { to: '/admin/domains', label: 'Manajemen Domain' },
+    { to: '/admin/users', label: 'Manajemen User' },
+    { to: '/admin/packages', label: 'Manajemen Paket' },
     { to: '/admin/integrations', label: 'Integrasi Aplikasi' },
     { to: '/calendar', label: 'Kalender' },
     { to: '/tasks', label: 'Tugas' },

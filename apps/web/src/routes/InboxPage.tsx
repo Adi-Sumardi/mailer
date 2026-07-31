@@ -57,8 +57,14 @@ export default function InboxPage() {
     setIsLoading(false);
   }
 
+  const [selectedAttachments, setSelectedAttachments] = useState<import('../lib/types').EmailAttachment[]>([]);
+
   async function handleSelectEmail(email: EmailMessage) {
     setSelectedEmail(email);
+    api.get<import('../lib/types').EmailAttachment[]>(`/emails/${email.id}/attachments`)
+      .then((atts) => setSelectedAttachments(atts))
+      .catch(() => setSelectedAttachments([]));
+
     if (!email.isRead) {
       const updated = await api.patch<EmailMessage>(`/emails/${email.id}/flags`, { isRead: true });
       setEmails((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
@@ -160,6 +166,31 @@ export default function InboxPage() {
                 Dari <strong>{selectedEmail.fromAddr}</strong> ke {selectedEmail.toAddr}
               </p>
               <p className="email-detail-body">{selectedEmail.body}</p>
+
+              {selectedAttachments.length > 0 && (
+                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-outline-variant)' }}>
+                  <strong style={{ fontSize: '13px', display: 'block', marginBottom: '8px' }}>
+                    📎 Lampiran File ({selectedAttachments.length}):
+                  </strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {selectedAttachments.map((att) => (
+                      <div
+                        key={att.id}
+                        style={{
+                          background: 'var(--color-surface-variant)',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          border: '1px solid var(--color-outline-variant)',
+                        }}
+                      >
+                        📄 <strong>{att.filename}</strong> ({att.sizeKb} KB)
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="email-detail-actions">
                 <button
                   className="btn-ghost"
