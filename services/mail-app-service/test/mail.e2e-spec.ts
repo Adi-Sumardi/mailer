@@ -1,11 +1,23 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
+import { promises as dns } from 'dns';
+import * as nodemailer from 'nodemailer';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MailboxService } from '../src/mailbox/mailbox.service';
 import { EmailService } from '../src/email/email.service';
 import { signTestToken } from './jwt.helper';
+
+// SMTP_HOST sengaja tidak diset di test env (lihat setup-env.ts) supaya dispatchDueEmails()
+// lewat jalur fallback sendDirectMx() — di-mock di sini (dns + nodemailer) supaya test
+// deterministik dan tidak pernah benar-benar menghubungi internet/Gmail sungguhan.
+jest.mock('dns', () => ({
+  promises: { resolveMx: jest.fn() },
+}));
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn(),
+}));
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -52,6 +64,9 @@ describe('Mail app (e2e) — FR-06 s/d FR-11a', () => {
     mailboxB = b;
     tokenA = signTestToken({ sub: 'user-a', mailboxId: a.id });
     tokenB = signTestToken({ sub: 'user-b', mailboxId: b.id });
+
+    (dns.resolveMx as jest.Mock).mockReset();
+    (nodemailer.createTransport as jest.Mock).mockReset();
   });
 
   it('rejects request tanpa token (401)', async () => {
@@ -161,7 +176,11 @@ describe('Mail app (e2e) — FR-06 s/d FR-11a', () => {
     expect(cancelled.body.recalled).toBe(true);
   });
 
-  it('FR-11a.2: setelah jendela waktu lewat, status "sudah terkirim" dan tidak bisa dibatalkan (409)', async () => {
+  it('FR-11a.2: dispatch sukses (SMTP relay berhasil) -> status "sent", tidak bisa dibatalkan (409)', async () => {
+    (dns.resolveMx as jest.Mock).mockResolvedValueOnce([{ exchange: 'mx.gmail-test.invalid', priority: 10 }]);
+    const sendMail = jest.fn().mockResolvedValueOnce({});
+    (nodemailer.createTransport as jest.Mock).mockReturnValueOnce({ sendMail });
+
     const composed = await request(app.getHttpServer())
       .post('/emails')
       .set('Authorization', `Bearer ${tokenA}`)
@@ -170,7 +189,9 @@ describe('Mail app (e2e) — FR-06 s/d FR-11a', () => {
 
     // DEFAULT_RECALL_WINDOW_SECONDS=2 di test env — tunggu window habis.
     await sleep(2200);
-    await emailService.dispatchDueEmails();
+    const result = await emailService.dispatchDueEmails();
+    expect(result.dispatched).toBeGreaterThanOrEqual(1);
+    expect(sendMail).toHaveBeenCalled();
 
     await request(app.getHttpServer())
       .post(`/emails/${composed.body.id}/cancel`)
@@ -182,6 +203,28 @@ describe('Mail app (e2e) — FR-06 s/d FR-11a', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(200);
     expect(finalState.body.sendStatus).toBe('sent');
+  });
+
+  it('FR-11a.2: dispatch gagal (SMTP relay tidak reachable) -> status "failed", bukan "sent" (bug lama: dulu selalu ditandai sent tanpa syarat)', async () => {
+    (dns.resolveMx as jest.Mock).mockResolvedValueOnce([{ exchange: 'mx.gmail-test.invalid', priority: 10 }]);
+    const sendMail = jest.fn().mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    (nodemailer.createTransport as jest.Mock).mockReturnValueOnce({ sendMail });
+
+    const composed = await request(app.getHttpServer())
+      .post('/emails')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ toAddr: 'orang-luar@gmail.com', subject: 'Gagal Kirim', body: 'relay mati' })
+      .expect(201);
+
+    await sleep(2200);
+    const result = await emailService.dispatchDueEmails();
+    expect(result.failed).toBeGreaterThanOrEqual(1);
+
+    const finalState = await request(app.getHttpServer())
+      .get(`/emails/${composed.body.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+    expect(finalState.body.sendStatus).toBe('failed');
   });
 
   it('FR-08: search berdasarkan subjek dan isi', async () => {

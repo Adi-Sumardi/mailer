@@ -189,15 +189,21 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     throw new ConflictException('Email ini tidak dapat ditarik');
   }
 
-  private async sendDirectMx(email: { id: string; fromAddr: string; toAddr: string; subject: string; body: string }) {
+  private async sendDirectMx(email: {
+    id: string;
+    fromAddr: string;
+    toAddr: string;
+    subject: string;
+    body: string;
+  }): Promise<boolean> {
     const domain = email.toAddr.split('@')[1];
-    if (!domain) return;
+    if (!domain) return false;
 
     try {
       const mxRecords = await dns.promises.resolveMx(domain);
       if (!mxRecords || mxRecords.length === 0) {
         this.logger.warn(`No MX records found for domain ${domain}`);
-        return;
+        return false;
       }
       mxRecords.sort((a, b) => a.priority - b.priority);
       const targetMxHost = mxRecords[0].exchange;
@@ -234,25 +240,34 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
       });
 
       this.logger.log(`SendagoMail Engine: Email ${email.id} delivered directly to target MX ${targetMxHost} (${email.toAddr})`);
+      return true;
     } catch (err) {
       this.logger.warn(`SendagoMail Engine Direct MX Delivery to ${domain} (${email.toAddr}) handled: ${(err as Error).message}`);
+      return false;
     }
   }
 
   // Dipanggil oleh scheduler untuk menyerahkan email eksternal ke SendagoMail Engine.
+  // PENTING: status HANYA ditandai 'sent' kalau pengiriman SMTP benar-benar sukses —
+  // sebelumnya seluruh batch ditandai 'sent' tanpa syarat di akhir, jadi email yang gagal
+  // terkirim tetap terlihat "sent" di UI (bug nyata: user tidak pernah tahu emailnya gagal).
   async dispatchDueEmails() {
     const due = await this.prisma.email.findMany({
       where: { sendStatus: 'queued', recallDeadlineAt: { lte: new Date() } },
     });
 
     if (due.length === 0) {
-      return { dispatched: 0 };
+      return { dispatched: 0, failed: 0 };
     }
 
     const transporter = this.getTransporter();
+    let dispatched = 0;
+    let failed = 0;
 
     for (const email of due) {
       this.logger.log(`SendagoMail Engine Dispatcher: Processing email ${email.id} -> ${email.toAddr}`);
+
+      let success = false;
       if (transporter) {
         try {
           const attachments = await this.prisma.attachment.findMany({
@@ -278,20 +293,31 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
             attachments: attachmentList,
           });
           this.logger.log(`Email ${email.id} successfully sent via SMTP Transport to ${email.toAddr}`);
+          success = true;
         } catch (err) {
           this.logger.error(`Failed to send email ${email.id} via SMTP Transport: ${(err as Error).message}`);
         }
       } else {
         // Direct MX Resolution & Outbound Delivery
-        await this.sendDirectMx(email);
+        success = await this.sendDirectMx(email);
+      }
+
+      if (success) {
+        await this.prisma.email.update({
+          where: { id: email.id },
+          data: { sendStatus: 'sent', sentAt: new Date() },
+        });
+        dispatched += 1;
+      } else {
+        await this.prisma.email.update({
+          where: { id: email.id },
+          data: { sendStatus: 'failed' },
+        });
+        failed += 1;
       }
     }
 
-    await this.prisma.email.updateMany({
-      where: { id: { in: due.map((e) => e.id) } },
-      data: { sendStatus: 'sent', sentAt: new Date() },
-    });
-    return { dispatched: due.length };
+    return { dispatched, failed };
   }
 
   private async autoDispatchDue(mailboxId: string) {
