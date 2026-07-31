@@ -67,6 +67,11 @@ model ApiCredential {
   memberId   String @unique @map("member_id")
   secretHash String @map("secret_hash")
 
+  // Mailbox pengirim (dari mail-app-service) yang dipakai saat email dikirim lewat
+  // credential ini. Di-resolve otomatis ke mailbox user pertama di tenant kalau tidak
+  // diisi eksplisit saat create — lihat ApiCredentialService.resolveMailboxId().
+  mailboxId String @map("mailbox_id")
+
   // FR terkait paket berlangganan (belum ada sistem billing sungguhan — lihat README):
   // sandbox selalu dibatasi kuota kecil gratis; production pakai limit default sampai
   // nanti benar-benar terhubung ke paket tenant.

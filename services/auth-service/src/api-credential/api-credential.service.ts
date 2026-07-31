@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApiCredentialDto } from './dto/create-api-credential.dto';
@@ -22,13 +22,39 @@ export class ApiCredentialService {
     const secretHash = this.hashSecret(secret);
     const dailyEmailLimit =
       environment === 'sandbox' ? SANDBOX_DAILY_EMAIL_LIMIT : PRODUCTION_DEFAULT_DAILY_EMAIL_LIMIT;
+    const mailboxId = await this.resolveMailboxId(tenantId, dto.mailboxId);
 
     const credential = await this.prisma.apiCredential.create({
-      data: { tenantId, name: dto.name, environment, memberId, secretHash, dailyEmailLimit },
+      data: { tenantId, name: dto.name, environment, memberId, secretHash, dailyEmailLimit, mailboxId },
     });
 
     // Secret mentah HANYA muncul di response ini, sekali — setelahnya cuma hash yang disimpan.
     return { ...this.toPublic(credential), secret };
+  }
+
+  // Kalau mailboxId tidak diisi eksplisit, pakai mailbox user pertama di tenant yang
+  // sudah terprovisi (FR-07) sebagai identitas pengirim default credential ini.
+  private async resolveMailboxId(tenantId: string, explicitMailboxId?: string): Promise<string> {
+    if (explicitMailboxId) {
+      const owner = await this.prisma.user.findFirst({
+        where: { tenantId, mailboxId: explicitMailboxId },
+      });
+      if (!owner) {
+        throw new BadRequestException('mailboxId tidak ditemukan atau bukan milik tenant ini');
+      }
+      return explicitMailboxId;
+    }
+
+    const firstUser = await this.prisma.user.findFirst({
+      where: { tenantId, mailboxId: { not: null } },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!firstUser?.mailboxId) {
+      throw new BadRequestException(
+        'Belum ada mailbox terprovisi di tenant ini — pastikan minimal satu user sudah punya mailbox sebelum membuat API credential',
+      );
+    }
+    return firstUser.mailboxId;
   }
 
   async findAll(tenantId: string | null) {
@@ -56,10 +82,9 @@ export class ApiCredentialService {
     return this.toPublic(updated);
   }
 
-  // Dipanggil (nantinya) oleh mail-app-service sebelum mengizinkan pengiriman email lewat
-  // API eksternal (bukan lewat UI/JWT user biasa) — memverifikasi memberId+secret, mengecek
-  // & mengonsumsi kuota harian. Belum ada pemanggil sungguhan dari mail-app-service saat ini
-  // (lihat README) — endpoint ini sudah fungsional & teruji, tinggal di-wire.
+  // Dipanggil oleh mail-app-service (POST /emails/api-send) sebelum mengizinkan pengiriman
+  // email lewat API eksternal (bukan lewat UI/JWT user biasa) — memverifikasi memberId+secret,
+  // mengecek & mengonsumsi kuota harian, dan mengembalikan mailboxId pengirim.
   async validateAndConsumeQuota(dto: ValidateApiCredentialDto) {
     const credential = await this.prisma.apiCredential.findUnique({
       where: { memberId: dto.memberId },
@@ -93,6 +118,7 @@ export class ApiCredentialService {
     return {
       valid: true as const,
       tenantId: credential.tenantId,
+      mailboxId: credential.mailboxId,
       environment: credential.environment,
       remainingQuota: updated.dailyEmailLimit - updated.emailsSentToday,
     };
@@ -112,13 +138,24 @@ export class ApiCredentialService {
     name: string;
     environment: string;
     memberId: string;
+    mailboxId: string;
     dailyEmailLimit: number;
     emailsSentToday: number;
     createdAt: Date;
     revokedAt: Date | null;
   }) {
-    const { id, tenantId, name, environment, memberId, dailyEmailLimit, emailsSentToday, createdAt, revokedAt } =
-      credential;
-    return { id, tenantId, name, environment, memberId, dailyEmailLimit, emailsSentToday, createdAt, revokedAt };
+    const {
+      id,
+      tenantId,
+      name,
+      environment,
+      memberId,
+      mailboxId,
+      dailyEmailLimit,
+      emailsSentToday,
+      createdAt,
+      revokedAt,
+    } = credential;
+    return { id, tenantId, name, environment, memberId, mailboxId, dailyEmailLimit, emailsSentToday, createdAt, revokedAt };
   }
 }

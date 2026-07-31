@@ -34,10 +34,33 @@ describe('API Credential (e2e) — member_id/secret, sandbox vs production quota
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
     prisma = app.get(PrismaService);
+
+    // resolveMailboxId() butuh minimal satu user dengan mailbox terprovisi per tenant.
+    await prisma.user.create({
+      data: {
+        id: 'tadmin-1',
+        email: 'tadmin-1@credential-test.local',
+        passwordHash: 'x',
+        role: 'tenant_admin',
+        tenantId: 'tenant-a',
+        mailboxId: 'mailbox-tenant-a-1',
+      },
+    });
+    await prisma.user.create({
+      data: {
+        id: 'tadmin-2',
+        email: 'tadmin-2@credential-test.local',
+        passwordHash: 'x',
+        role: 'tenant_admin',
+        tenantId: 'tenant-b',
+        mailboxId: 'mailbox-tenant-b-1',
+      },
+    });
   });
 
   afterAll(async () => {
     await prisma.apiCredential.deleteMany();
+    await prisma.user.deleteMany({ where: { id: { in: ['tadmin-1', 'tadmin-2'] } } });
     await app.close();
   });
 
@@ -126,6 +149,15 @@ describe('API Credential (e2e) — member_id/secret, sandbox vs production quota
     expect(validated.body.valid).toBe(true);
     expect(validated.body.remainingQuota).toBe(49);
     expect(validated.body.tenantId).toBe('tenant-a');
+    expect(validated.body.mailboxId).toBe('mailbox-tenant-a-1');
+  });
+
+  it('create menolak mailboxId yang bukan milik tenant (400)', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/api-credentials')
+      .set('Authorization', `Bearer ${tenantAdminToken}`)
+      .send({ name: 'Coba Mailbox Tenant Lain', mailboxId: 'mailbox-tenant-b-1' })
+      .expect(400);
   });
 
   it('validate menolak secret yang salah', async () => {

@@ -54,6 +54,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       DEFAULT_RECALL_WINDOW_SECONDS: 20
       MAX_ATTACHMENT_SIZE_KB: 25600
+      AUTH_SERVICE_URL: http://auth-service:3000
       PORT: 3002
       # mail-engine (Postfix) berjalan sebagai docker-compose project TERPISAH di host yang
       # sama, port-nya di-publish ke host — dijangkau lewat host.docker.internal, bukan nama

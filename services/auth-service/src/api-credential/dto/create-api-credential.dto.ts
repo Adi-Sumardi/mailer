@@ -14,4 +14,10 @@ export class CreateApiCredentialDto {
   @IsOptional()
   @IsString()
   tenantId?: string;
+
+  // Mailbox pengirim (mailboxId dari mail-app-service). Kalau tidak diisi, di-resolve
+  // otomatis ke mailbox user pertama yang sudah terprovisi di tenant ini.
+  @IsOptional()
+  @IsString()
+  mailboxId?: string;
 }
