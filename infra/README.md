@@ -106,8 +106,33 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now sendagomail-tunnel.service
 ```
 
+## Backup Otomatis Postgres
+
+`scripts/backup-postgres.sh` — `pg_dump` per-database (auth, domain_provisioning, mail_app,
+calendar_task, automation), di-gzip, disimpan di `/home/mailer/backups/postgres/` di host
+(BUKAN di dalam volume Docker — kalau volume `infra_pgdata` hilang, backup ini tetap aman).
+Retensi 14 hari (file lebih lama otomatis dihapus).
+
+Setup sekali di server:
+
+```bash
+sudo cp infra/scripts/backup-postgres.sh /usr/local/bin/backup-postgres.sh
+sudo chmod +x /usr/local/bin/backup-postgres.sh
+mkdir -p /home/mailer/backups/postgres
+(crontab -l 2>/dev/null; echo '30 2 * * * /usr/local/bin/backup-postgres.sh >> /home/mailer/backups/backup-postgres.log 2>&1') | crontab -
+```
+
+Restore satu database dari backup:
+
+```bash
+zcat /home/mailer/backups/postgres/auth_20260731-212321.sql.gz | docker exec -i infra-postgres-1 psql -U sendagomail -d auth
+```
+
+**Belum ada offsite backup** — file backup masih di disk yang sama dengan server produksi (kalau
+seluruh VPS hilang, backup ikut hilang). Untuk produksi sungguhan, sinkronkan
+`/home/mailer/backups/postgres/` ke storage terpisah (S3/rclone/dsb).
+
 ## Catatan & Keterbatasan
-- **Belum ada backup otomatis** untuk volume Postgres (`infra_pgdata`) — kalau volume hilang, semua data hilang. Perlu cron `pg_dump` + simpan ke storage terpisah sebelum dipakai untuk data sungguhan.
 - **Image Docker belum dioptimasi ukurannya** — tiap service NestJS pakai single-stage build (termasuk devDependencies) supaya `prisma migrate deploy` bisa jalan di runtime. Bisa dikecilkan dengan multi-stage + salin `prisma` CLI secara selektif kalau ukuran image jadi masalah.
 - **TLS/HTTPS** ditangani penuh oleh Cloudflare Tunnel (tidak ada certbot/Let's Encrypt manual dibutuhkan) — tapi ini juga berarti traffic HTTP di dalam server (container ke container, dan gateway ke cloudflared) tidak terenkripsi; cukup aman untuk localhost-only tapi dicatat sebagai batasan.
 - **Rate limiting di `api-gateway` bersifat in-memory** — reset kalau container restart, dan tidak akurat kalau nanti di-scale ke banyak instance gateway.
