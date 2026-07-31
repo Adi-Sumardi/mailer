@@ -25,6 +25,7 @@ services:
       - ./data/mail-state/:/var/mail-state/
       - ./data/mail-logs/:/var/log/mail/
       - ./config/:/tmp/docker-mailserver/
+      - ./letsencrypt/:/etc/letsencrypt/:ro
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     stop_grace_period: 1m
