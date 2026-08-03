@@ -41,7 +41,10 @@ services:
       OUTBOUND_RELAY_IP: ${OUTBOUND_RELAY_IP}
       PORT: 3001
     volumes:
-      - dkim-keys:/app/dkim-keys
+      # Bind mount LANGSUNG ke direktori host yang dibaca mail-engine (project compose
+      # TERPISAH) — sebelumnya named volume Docker biasa yang tidak terhubung ke mail-engine
+      # sama sekali, jadi hand-off DKIM tidak pernah benar-benar sampai ke mailserver.
+      - ../mail-engine/config/opendkim/keys:/app/dkim-keys
     depends_on: [postgres]
     ports: ["18001:3001"]
     networks: [sendagomail]
@@ -129,4 +132,3 @@ networks:
 
 volumes:
   pgdata:
-  dkim-keys:
