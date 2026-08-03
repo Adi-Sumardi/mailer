@@ -59,7 +59,7 @@ services:
       DATABASE_URL: postgresql://sendagomail:${POSTGRES_PASSWORD}@postgres:5432/mail_app?schema=public
       JWT_SECRET: ${JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
-      DEFAULT_RECALL_WINDOW_SECONDS: 20
+      DEFAULT_RECALL_WINDOW_SECONDS: 5
       MAX_ATTACHMENT_SIZE_KB: 25600
       AUTH_SERVICE_URL: http://auth-service:3000
       PORT: 3002
