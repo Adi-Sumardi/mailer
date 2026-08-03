@@ -37,11 +37,14 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
   // Footer branding di setiap email yang dikirim keluar — logo dilampirkan sebagai
   // inline attachment (Content-ID), BUKAN base64 di dalam <img src>, karena banyak klien
   // email (termasuk Gmail) memblokir/menghapus data-URI base64 di HTML email.
-  private buildBrandedHtml(bodyText: string): string {
-    const escapedBody = bodyText.replace(/\n/g, '<br/>');
+  private buildBrandedHtml(bodyText: string, isHtml: boolean): string {
+    // Kalau body sudah HTML mentah (mis. template transaksional pihak ketiga), JANGAN
+    // konversi newline-nya jadi <br/> — newline di source HTML (indentasi antar tag) bukan
+    // baris baru yang dimaksud, dan konversi itu bikin gap vertikal raksasa di klien email.
+    const renderedBody = isHtml ? bodyText : bodyText.replace(/\n/g, '<br/>');
     return `
       <div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
-        ${escapedBody}
+        ${renderedBody}
       </div>
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-family: sans-serif;">
         <img src="cid:${LOGO_CID}" alt="adilabs" style="height: 24px; width: auto;" />
@@ -131,6 +134,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
           toAddr: dto.toAddr,
           subject: dto.subject,
           body: dto.body,
+          isHtml: dto.isHtml ?? false,
           sendStatus: 'sent',
           sentAt: now,
         },
@@ -146,6 +150,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
           toAddr: dto.toAddr,
           subject: dto.subject,
           body: dto.body,
+          isHtml: dto.isHtml ?? false,
           sendStatus: 'sent',
           sentAt: now,
           isRead: false,
@@ -175,6 +180,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
         toAddr: dto.toAddr,
         subject: dto.subject,
         body: dto.body,
+        isHtml: dto.isHtml ?? false,
         sendStatus: 'queued',
         recallDeadlineAt,
       },
@@ -224,6 +230,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     toAddr: string;
     subject: string;
     body: string;
+    isHtml: boolean;
   }): Promise<boolean> {
     const domain = email.toAddr.split('@')[1];
     if (!domain) return false;
@@ -266,7 +273,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
         to: email.toAddr,
         subject: email.subject,
         text: email.body,
-        html: this.buildBrandedHtml(email.body),
+        html: this.buildBrandedHtml(email.body, email.isHtml),
         attachments: attachmentList,
       });
 
@@ -322,7 +329,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
             to: email.toAddr,
             subject: email.subject,
             text: email.body,
-            html: this.buildBrandedHtml(email.body),
+            html: this.buildBrandedHtml(email.body, email.isHtml),
             attachments: attachmentList,
           });
           this.logger.log(`Email ${email.id} successfully sent via SMTP Transport to ${email.toAddr}`);

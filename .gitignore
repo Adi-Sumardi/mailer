@@ -2,6 +2,7 @@
 .env
 *.env.local
 **/config/opendkim/keys/
+services/domain-provisioning/test/.tmp-dkim-keys/
 
 # Dependencies
 node_modules/

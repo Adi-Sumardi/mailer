@@ -25,6 +25,7 @@ export class ApiSendEmailController {
       toAddr: dto.toAddr,
       subject: dto.subject,
       body: dto.body,
+      isHtml: dto.isHtml,
     });
 
     return { ...email, environment: result.environment, remainingQuota: result.remainingQuota };

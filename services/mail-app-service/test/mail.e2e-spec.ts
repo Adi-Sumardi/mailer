@@ -227,6 +227,26 @@ describe('Mail app (e2e) — FR-06 s/d FR-11a', () => {
     expect(finalState.body.sendStatus).toBe('failed');
   });
 
+  it('FR-11a.2: isHtml=true tidak mengonversi newline body jadi <br/> (body sudah HTML mentah)', async () => {
+    (dns.resolveMx as jest.Mock).mockResolvedValueOnce([{ exchange: 'mx.gmail-test.invalid', priority: 10 }]);
+    const sendMail = jest.fn().mockResolvedValueOnce({});
+    (nodemailer.createTransport as jest.Mock).mockReturnValueOnce({ sendMail });
+
+    const htmlBody = '<table>\n  <tr>\n    <td>Halo</td>\n  </tr>\n</table>';
+    await request(app.getHttpServer())
+      .post('/emails')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ toAddr: 'orang-luar@gmail.com', subject: 'Template HTML', body: htmlBody, isHtml: true })
+      .expect(201);
+
+    await sleep(2200);
+    await emailService.dispatchDueEmails();
+
+    const sentHtml = sendMail.mock.calls[0][0].html as string;
+    expect(sentHtml).not.toContain('<br/>');
+    expect(sentHtml).toContain('<table>');
+  });
+
   it('FR-08: search berdasarkan subjek dan isi', async () => {
     await request(app.getHttpServer())
       .post('/emails')

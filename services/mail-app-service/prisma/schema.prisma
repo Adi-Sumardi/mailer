@@ -73,6 +73,11 @@ model Email {
   subject  String
   body     String
 
+  // true kalau body sudah HTML mentah (mis. template transaksional pihak ketiga lewat
+  // /emails/api-send) — kalau false (default), body dianggap plain text dan newline-nya
+  // dikonversi jadi <br/> saat dirender (lihat EmailService.buildBrandedHtml()).
+  isHtml Boolean @default(false) @map("is_html")
+
   isRead      Boolean @default(false) @map("is_read")
   isImportant Boolean @default(false) @map("is_important")
   isSpam      Boolean @default(false) @map("is_spam")

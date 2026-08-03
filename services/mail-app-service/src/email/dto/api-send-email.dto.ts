@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class ApiSendEmailDto {
   @IsString()
@@ -20,4 +20,10 @@ export class ApiSendEmailDto {
   @IsString()
   @IsNotEmpty()
   body: string;
+
+  // true kalau body sudah HTML mentah (template transaksional dengan logo/tombol/dsb) —
+  // false (default) memperlakukan body sebagai plain text, newline dikonversi jadi <br/>.
+  @IsOptional()
+  @IsBoolean()
+  isHtml?: boolean;
 }
