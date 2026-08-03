@@ -34,7 +34,10 @@ services:
       DATABASE_URL: postgresql://sendagomail:${POSTGRES_PASSWORD}@postgres:5432/domain_provisioning?schema=public
       JWT_SECRET: ${JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
-      DKIM_KEYS_DIR: /app/dkim-keys
+      # /app/opendkim/keys, BUKAN /app/dkim-keys — writeDkimKeyToMailEngine() juga menulis
+      # KeyTable/SigningTable satu level DI ATAS keysDir, jadi direktori opendkim/ (parent-nya)
+      # harus ikut ter-bind-mount, tidak cukup cuma keys/ subdirectory-nya saja.
+      DKIM_KEYS_DIR: /app/opendkim/keys
       DOMAIN_VERIFICATION_TXT_PREFIX: sendagomail-verify
       MAIL_ENGINE_MX_HOST: mail.adilabs.id
       MAIL_ENGINE_MX_PRIORITY: 10
@@ -44,7 +47,7 @@ services:
       # Bind mount LANGSUNG ke direktori host yang dibaca mail-engine (project compose
       # TERPISAH) — sebelumnya named volume Docker biasa yang tidak terhubung ke mail-engine
       # sama sekali, jadi hand-off DKIM tidak pernah benar-benar sampai ke mailserver.
-      - ../mail-engine/config/opendkim/keys:/app/dkim-keys
+      - ../mail-engine/config/opendkim:/app/opendkim
     depends_on: [postgres]
     ports: ["18001:3001"]
     networks: [sendagomail]
