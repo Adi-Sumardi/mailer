@@ -12,10 +12,14 @@ export function buildMxRecord(mxHost: string, priority: number): string {
   return `${priority} ${mxHost}.`;
 }
 
-// FR-03: rekomendasi SPF record — default "-all" (hard fail) selaras mitigasi risiko spam di BRD
-export function buildSpfRecord(outboundRelayHost?: string): string {
+// FR-03: rekomendasi SPF record — default "-all" (hard fail) selaras mitigasi risiko spam di BRD.
+// outboundRelayIp = IP mail-engine yang sungguhan mengirim (WAJIB diisi di production lewat
+// env OUTBOUND_RELAY_IP — tanpa ini SPF yang direkomendasikan tidak mengotorisasi pengirim
+// sungguhan). outboundRelayHost opsional kalau nanti ada shared SPF include record terpisah.
+export function buildSpfRecord(outboundRelayHost?: string, outboundRelayIp?: string): string {
+  const ip = outboundRelayIp ? ` ip4:${outboundRelayIp}` : '';
   const includes = outboundRelayHost ? ` include:${outboundRelayHost}` : '';
-  return `v=spf1 ip4:43.225.66.149${includes} ~all`;
+  return `v=spf1${ip}${includes} -all`;
 }
 
 // FR-03: rekomendasi DMARC record — mulai dari kebijakan "quarantine" (lebih aman dari "none")

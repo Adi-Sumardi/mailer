@@ -45,7 +45,10 @@ export class DomainService {
           this.config.get<string>('MAIL_ENGINE_MX_HOST', 'mail.example.com'),
           Number(this.config.get<string>('MAIL_ENGINE_MX_PRIORITY', '10')),
         ),
-        spfRecord: buildSpfRecord(this.config.get<string>('OUTBOUND_RELAY_HOST')),
+        spfRecord: buildSpfRecord(
+          this.config.get<string>('OUTBOUND_RELAY_HOST'),
+          this.config.get<string>('OUTBOUND_RELAY_IP'),
+        ),
         dmarcRecord: buildDmarcRecord(dto.domainName),
         dkimSelector: dkim.selector,
         dkimPublicKey: dkim.publicKeyRecord,

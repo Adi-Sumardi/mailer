@@ -10,9 +10,13 @@ describe('dns-record.util', () => {
     expect(buildMxRecord('mail.example.com', 10)).toBe('10 mail.example.com.');
   });
 
-  it('buildSpfRecord hard-fails by default and includes relay when provided', () => {
+  it('buildSpfRecord hard-fails by default and includes relay host/IP when provided', () => {
     expect(buildSpfRecord()).toBe('v=spf1 -all');
     expect(buildSpfRecord('relay.provider.com')).toBe('v=spf1 include:relay.provider.com -all');
+    expect(buildSpfRecord(undefined, '203.0.113.10')).toBe('v=spf1 ip4:203.0.113.10 -all');
+    expect(buildSpfRecord('relay.provider.com', '203.0.113.10')).toBe(
+      'v=spf1 ip4:203.0.113.10 include:relay.provider.com -all',
+    );
   });
 
   it('buildDmarcRecord starts at quarantine policy with reporting address', () => {

@@ -36,8 +36,9 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       DKIM_KEYS_DIR: /app/dkim-keys
       DOMAIN_VERIFICATION_TXT_PREFIX: sendagomail-verify
-      MAIL_ENGINE_MX_HOST: mail.sendagomail.adilabs.id
+      MAIL_ENGINE_MX_HOST: mail.adilabs.id
       MAIL_ENGINE_MX_PRIORITY: 10
+      OUTBOUND_RELAY_IP: ${OUTBOUND_RELAY_IP}
       PORT: 3001
     volumes:
       - dkim-keys:/app/dkim-keys
