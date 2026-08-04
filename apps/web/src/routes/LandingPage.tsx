@@ -128,7 +128,6 @@ export default function LandingPage() {
       </section>
 
       <section className="landing-pricing">
-        <h2 className="landing-section-title">Pilih Paket SendagoMail</h2>
         <div className="landing-pricing-grid">
           {PRICING_PLANS.map((plan) => (
             <div key={plan.name} className={`landing-pricing-card accent-${plan.accent}`}>
