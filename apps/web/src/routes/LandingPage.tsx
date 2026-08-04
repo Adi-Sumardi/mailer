@@ -11,18 +11,17 @@ const MARQUEE_ITEMS = [
 ];
 
 const CAROUSEL_SLIDES = [
-  { src: '/landing/landing01.jpg', alt: 'Integrasi Aplikasi Mudah dengan SendagoMail' },
-  { src: '/landing/landing02.jpg', alt: 'Setiap Notifikasi Penting, Terkirim Aman dengan SendagoMail' },
-  { src: '/landing/landing03.jpg', alt: 'Kirim Email, Bangun Relasi, Tumbuhkan Bisnis dengan SendagoMail' },
+  { icon: '📥', title: 'Mail yang terasa seperti Gmail', desc: 'Inbox 3-panel, HTML email aman, pencarian cepat — semua di domain Anda sendiri.' },
+  { icon: '📡', title: 'Kirim OTP & notifikasi dalam 1 request', desc: 'Integrasi REST API cepat — contoh kode cURL, PHP, Python, Node.js, Java.' },
+  { icon: '🤖', title: 'AI Agent untuk triase inbox', desc: 'Automation rules + dukungan AI agent (OpenAI & Anthropic) untuk email masuk.' },
+  { icon: '🎨', title: 'Branding email sepenuhnya milik Anda', desc: 'Logo, warna, judul kustom per alamat pengirim — bukan branding generik.' },
 ];
 
-const FEATURES = [
-  { icon: '📥', title: 'Mail', desc: 'Webmail modern, folder, recall/unsend, lampiran file.' },
-  { icon: '📅', title: 'Kalender', desc: 'Jadwalkan acara & undang peserta internal.' },
-  { icon: '✅', title: 'Tugas', desc: 'To-do list dengan prioritas dan tenggat waktu.' },
-  { icon: '🤖', title: 'Automation', desc: 'Filter otomatis + opsi AI Agent untuk triase email.' },
-  { icon: '📡', title: 'Integrasi API', desc: 'Kirim email transaksional lewat REST API sederhana.' },
-  { icon: '🎨', title: 'Template Branding', desc: 'Logo, warna, judul kustom per alamat pengirim.' },
+const FEATURE_TAGS = [
+  { icon: '📥', label: 'Webmail modern' },
+  { icon: '📡', label: 'REST API transaksional' },
+  { icon: '🔐', label: 'SPF · DKIM · DMARC otomatis' },
+  { icon: '🤖', label: 'Automation + AI Agent' },
 ];
 
 export default function LandingPage() {
@@ -31,9 +30,11 @@ export default function LandingPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setSlideIndex((i) => (i + 1) % CAROUSEL_SLIDES.length);
-    }, 5000);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  const slide = CAROUSEL_SLIDES[slideIndex];
 
   return (
     <div className="landing-page">
@@ -62,16 +63,32 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <section className="landing-carousel landing-carousel-image">
-        <Link to="/register" className="landing-carousel-track" style={{ transform: `translateX(-${slideIndex * 100}%)` }}>
-          {CAROUSEL_SLIDES.map((slide) => (
-            <img key={slide.src} src={slide.src} alt={slide.alt} className="landing-carousel-slide-img" />
-          ))}
-        </Link>
+      <section className="landing-hero">
+        <h1>Platform Email Multi-Tenant, Self-Hosted, Milik Anda Sendiri</h1>
+        <p>
+          Kirim &amp; terima email dengan domain Anda sendiri, integrasikan OTP/notifikasi lewat API,
+          dan otomatiskan inbox — tanpa biaya langganan bulanan pihak ketiga.
+        </p>
+        <div className="landing-hero-actions">
+          <Link to="/register" className="btn-primary btn-lg">
+            Mulai Gratis →
+          </Link>
+          <Link to="/login" className="btn-ghost btn-lg">
+            Sudah punya akun? Login
+          </Link>
+        </div>
+      </section>
+
+      <section className="landing-text-carousel">
+        <div className="landing-text-carousel-card">
+          <span className="landing-text-carousel-icon">{slide.icon}</span>
+          <h2>{slide.title}</h2>
+          <p>{slide.desc}</p>
+        </div>
         <div className="landing-carousel-dots">
-          {CAROUSEL_SLIDES.map((slide, i) => (
+          {CAROUSEL_SLIDES.map((s, i) => (
             <button
-              key={slide.src}
+              key={s.title}
               className={`landing-carousel-dot${i === slideIndex ? ' active' : ''}`}
               onClick={() => setSlideIndex(i)}
               aria-label={`Slide ${i + 1}`}
@@ -80,18 +97,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-features">
-        <h2 className="landing-section-title">Semua yang Anda butuhkan, satu platform</h2>
-        <div className="landing-features-grid">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="landing-feature-card">
-              <span className="landing-feature-icon">{f.icon}</span>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="landing-feature-tags">
+        {FEATURE_TAGS.map((f) => (
+          <span key={f.label} className="landing-feature-tag">
+            {f.icon} {f.label}
+          </span>
+        ))}
+      </div>
 
       <section className="landing-cta-band">
         <h2>Siap kelola email dengan domain Anda sendiri?</h2>

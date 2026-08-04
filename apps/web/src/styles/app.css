@@ -1790,43 +1790,43 @@ select:focus {
   flex-wrap: wrap;
 }
 
-/* Carousel */
-.landing-carousel {
-  max-width: 960px;
-  margin: 0 auto var(--space-xl) auto;
+/* Simple text carousel — satu kartu ringkas yang bergantian, bukan gambar besar */
+.landing-text-carousel {
+  max-width: 560px;
+  margin: 0 auto var(--space-lg) auto;
   padding: 0 var(--space-lg);
+  text-align: center;
 }
 
-.landing-carousel-image {
-  max-width: 1200px;
-}
-
-.landing-carousel-image .landing-carousel-track {
-  height: 320px;
-}
-
-.landing-carousel-track {
-  display: flex;
+.landing-text-carousel-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: transform 0.5s ease;
-  box-shadow: 0 20px 60px -20px rgba(11, 28, 48, 0.25);
+  padding: var(--space-lg) var(--space-xl);
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
-.landing-carousel-slide-img {
-  flex: 0 0 100%;
-  width: 100%;
-  height: 320px;
-  object-fit: cover;
-  object-position: top center;
-  display: block;
+.landing-text-carousel-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
 }
 
-@media (min-width: 720px) {
-  .landing-carousel-image .landing-carousel-track,
-  .landing-carousel-slide-img {
-    height: 420px;
-  }
+.landing-text-carousel-card h2 {
+  font-size: 18px;
+  margin: 0;
+  color: var(--color-on-surface);
+}
+
+.landing-text-carousel-card p {
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  margin: 0;
+  max-width: 420px;
 }
 
 .landing-carousel-dots {
@@ -1850,48 +1850,21 @@ select:focus {
   width: 20px;
 }
 
-/* Features */
-.landing-features {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: var(--space-xl) var(--space-lg);
-}
-
-.landing-section-title {
-  text-align: center;
-  font-size: 24px;
-  margin: 0 0 var(--space-lg) 0;
-  color: var(--color-on-surface);
-}
-
-.landing-features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-md);
-}
-
-.landing-feature-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-md);
+/* Baris tag fitur ringkas, gaya seperti footer ikon di landing sendago.adilabs.id */
+.landing-feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-lg);
   padding: var(--space-lg);
+  max-width: 900px;
+  margin: 0 auto var(--space-xl) auto;
 }
 
-.landing-feature-icon {
-  font-size: 28px;
-  display: block;
-  margin-bottom: var(--space-sm);
-}
-
-.landing-feature-card h3 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-}
-
-.landing-feature-card p {
-  margin: 0;
+.landing-feature-tag {
   font-size: 13px;
   color: var(--color-on-surface-variant);
+  white-space: nowrap;
 }
 
 /* CTA band */
