@@ -10,40 +10,10 @@ const MARQUEE_ITEMS = [
   '🎨 Branding kustom per pengirim — logo & warna sendiri',
 ];
 
-interface CarouselSlide {
-  eyebrow: string;
-  title: string;
-  description: string;
-  gradient: string;
-  to: string;
-  cta: string;
-}
-
-const CAROUSEL_SLIDES: CarouselSlide[] = [
-  {
-    eyebrow: 'WEBMAIL',
-    title: 'Mail yang terasa seperti Gmail',
-    description: 'Inbox 3-panel, HTML email aman, pencarian cepat — semua di domain Anda sendiri.',
-    gradient: 'linear-gradient(135deg, #e11d48 0%, #7c1d3f 100%)',
-    to: '/register',
-    cta: 'Coba Gratis',
-  },
-  {
-    eyebrow: 'API',
-    title: 'Kirim OTP & reset password dalam 1 request',
-    description: 'Integrasi cepat lewat REST API — contoh kode cURL, PHP, Python, Node.js, Java.',
-    gradient: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)',
-    to: '/register',
-    cta: 'Lihat Dokumentasi',
-  },
-  {
-    eyebrow: 'AUTOMATION',
-    title: 'Biarkan AI Agent yang triase inbox Anda',
-    description: 'Aturan otomatis + dukungan AI agent (OpenAI & Anthropic) untuk penanganan email masuk.',
-    gradient: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)',
-    to: '/register',
-    cta: 'Mulai Sekarang',
-  },
+const CAROUSEL_SLIDES = [
+  { src: '/landing/landing01.jpg', alt: 'Integrasi Aplikasi Mudah dengan SendagoMail' },
+  { src: '/landing/landing02.jpg', alt: 'Setiap Notifikasi Penting, Terkirim Aman dengan SendagoMail' },
+  { src: '/landing/landing03.jpg', alt: 'Kirim Email, Bangun Relasi, Tumbuhkan Bisnis dengan SendagoMail' },
 ];
 
 const FEATURES = [
@@ -87,47 +57,21 @@ export default function LandingPage() {
             Login
           </Link>
           <Link to="/register" className="btn-primary">
-            Daftar
+            Daftar Gratis
           </Link>
         </div>
       </header>
 
-      <section className="landing-hero">
-        <h1>Platform Email Multi-Tenant, Self-Hosted, Milik Anda Sendiri</h1>
-        <p>
-          Kirim &amp; terima email dengan domain Anda sendiri, integrasikan OTP/notifikasi lewat API,
-          dan otomatiskan inbox — tanpa biaya langganan bulanan pihak ketiga.
-        </p>
-        <div className="landing-hero-actions">
-          <Link to="/register" className="btn-primary btn-lg">
-            Mulai Gratis →
-          </Link>
-          <Link to="/login" className="btn-ghost btn-lg">
-            Sudah punya akun? Login
-          </Link>
-        </div>
-      </section>
-
-      <section className="landing-carousel">
-        <div
-          className="landing-carousel-track"
-          style={{ transform: `translateX(-${slideIndex * 100}%)` }}
-        >
+      <section className="landing-carousel landing-carousel-image">
+        <Link to="/register" className="landing-carousel-track" style={{ transform: `translateX(-${slideIndex * 100}%)` }}>
           {CAROUSEL_SLIDES.map((slide) => (
-            <div key={slide.title} className="landing-carousel-slide" style={{ background: slide.gradient }}>
-              <span className="landing-carousel-eyebrow">{slide.eyebrow}</span>
-              <h2>{slide.title}</h2>
-              <p>{slide.description}</p>
-              <Link to={slide.to} className="landing-carousel-cta">
-                {slide.cta} →
-              </Link>
-            </div>
+            <img key={slide.src} src={slide.src} alt={slide.alt} className="landing-carousel-slide-img" />
           ))}
-        </div>
+        </Link>
         <div className="landing-carousel-dots">
           {CAROUSEL_SLIDES.map((slide, i) => (
             <button
-              key={slide.title}
+              key={slide.src}
               className={`landing-carousel-dot${i === slideIndex ? ' active' : ''}`}
               onClick={() => setSlideIndex(i)}
               aria-label={`Slide ${i + 1}`}

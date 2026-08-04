@@ -1797,50 +1797,23 @@ select:focus {
   padding: 0 var(--space-lg);
 }
 
+.landing-carousel-image {
+  max-width: 1200px;
+}
+
 .landing-carousel-track {
   display: flex;
   border-radius: var(--radius-lg);
   overflow: hidden;
   transition: transform 0.5s ease;
+  box-shadow: 0 20px 60px -20px rgba(11, 28, 48, 0.25);
 }
 
-.landing-carousel-slide {
+.landing-carousel-slide-img {
   flex: 0 0 100%;
-  padding: var(--space-xl);
-  color: white;
-  min-height: 220px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--space-xs);
-}
-
-.landing-carousel-eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  opacity: 0.85;
-}
-
-.landing-carousel-slide h2 {
-  font-size: 26px;
-  margin: 4px 0;
-}
-
-.landing-carousel-slide p {
-  font-size: 14px;
-  opacity: 0.9;
-  max-width: 480px;
-  margin: 0 0 var(--space-sm) 0;
-}
-
-.landing-carousel-cta {
-  color: white;
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-  width: fit-content;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 .landing-carousel-dots {
