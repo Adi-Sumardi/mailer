@@ -67,6 +67,16 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page">
+      <div className="landing-marquee">
+        <div className="landing-marquee-track">
+          {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+            <span key={i} className="landing-marquee-item">
+              {item}
+            </span>
+          ))}
+        </div>
+      </div>
+
       <header className="landing-nav">
         <div className="landing-nav-brand">
           <img src="/logo.png" alt="SendagoMail" />
@@ -81,16 +91,6 @@ export default function LandingPage() {
           </Link>
         </div>
       </header>
-
-      <div className="landing-marquee">
-        <div className="landing-marquee-track">
-          {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
-            <span key={i} className="landing-marquee-item">
-              {item}
-            </span>
-          ))}
-        </div>
-      </div>
 
       <section className="landing-hero">
         <h1>Platform Email Multi-Tenant, Self-Hosted, Milik Anda Sendiri</h1>
