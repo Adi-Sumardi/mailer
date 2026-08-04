@@ -1868,6 +1868,122 @@ select:focus {
 }
 
 /* CTA band */
+/* Pricing */
+.landing-pricing {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.landing-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+.landing-pricing-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.landing-pricing-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.landing-pricing-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-container);
+}
+
+.accent-teal .landing-pricing-icon {
+  background: #d6f0f5;
+}
+
+.landing-pricing-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.landing-pricing-tagline {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+}
+
+.landing-pricing-desc {
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  margin: 0;
+}
+
+.landing-pricing-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.landing-pricing-features li {
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.landing-pricing-check {
+  color: var(--color-success);
+  flex-shrink: 0;
+}
+
+.landing-pricing-price {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.accent-teal .landing-pricing-price {
+  color: #0f766e;
+}
+
+.landing-pricing-price-note {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-on-surface-variant);
+}
+
+.landing-pricing-cta {
+  display: block;
+  text-align: center;
+  background: var(--color-success);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+.accent-teal .landing-pricing-cta {
+  background: #0f766e;
+}
+
 /* Footer */
 .landing-footer {
   display: flex;

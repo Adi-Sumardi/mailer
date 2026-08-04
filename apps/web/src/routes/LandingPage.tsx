@@ -24,6 +24,54 @@ const FEATURE_TAGS = [
   { icon: '🤖', label: 'Automation + AI Agent' },
 ];
 
+const CONTACT_EMAIL = 'sendagomail@adilabs.id';
+
+interface PricingPlan {
+  icon: string;
+  name: string;
+  tagline: string;
+  description: string;
+  features: string[];
+  price: string;
+  priceNote: string;
+  accent: 'green' | 'teal';
+}
+
+const PRICING_PLANS: PricingPlan[] = [
+  {
+    icon: '🪙',
+    name: 'Paket Coba',
+    tagline: 'Cara termurah untuk mencoba semua fitur',
+    description:
+      '1 domain custom terverifikasi otomatis, kuota API sandbox harian, dan akses penuh ke Mail, Kalender, Tugas, dan Automation — cara termurah untuk mencoba semua fitur SendagoMail.',
+    features: [
+      '1 domain custom (SPF/DKIM/DMARC otomatis)',
+      'Kuota API sandbox 50 email/hari',
+      '1 mailbox pengirim + Template branding',
+      'Akses penuh Webmail, Kalender, Tugas, Automation',
+    ],
+    price: 'Rp 149.000',
+    priceNote: 'Sekali bayar',
+    accent: 'green',
+  },
+  {
+    icon: '🖥️',
+    name: 'Paket Pasangin',
+    tagline: 'Kami setup semuanya untuk Anda',
+    description: 'Deployment SendagoMail khusus (self-hosted) yang kami siapkan end-to-end untuk bisnis Anda.',
+    features: [
+      'Gratis server & instalasi SendagoMail khusus (self-hosted)',
+      'Setup domain + DKIM/SPF/DMARC tanpa batas',
+      'Kuota API production disesuaikan kebutuhan',
+      'Template branding kustom disiapkan tim kami',
+      'Pendampingan integrasi API pertama + support prioritas',
+    ],
+    price: 'Rp 7.999.000',
+    priceNote: 'Sekali bayar',
+    accent: 'teal',
+  },
+];
+
 export default function LandingPage() {
   const [slideIndex, setSlideIndex] = useState(0);
 
@@ -104,6 +152,41 @@ export default function LandingPage() {
           </span>
         ))}
       </div>
+
+      <section className="landing-pricing">
+        <h2 className="landing-section-title">Pilih Paket SendagoMail</h2>
+        <div className="landing-pricing-grid">
+          {PRICING_PLANS.map((plan) => (
+            <div key={plan.name} className={`landing-pricing-card accent-${plan.accent}`}>
+              <div className="landing-pricing-card-header">
+                <span className="landing-pricing-icon">{plan.icon}</span>
+                <div>
+                  <h3>{plan.name}</h3>
+                  <span className="landing-pricing-tagline">{plan.tagline}</span>
+                </div>
+              </div>
+              <p className="landing-pricing-desc">{plan.description}</p>
+              <ul className="landing-pricing-features">
+                {plan.features.map((f) => (
+                  <li key={f}>
+                    <span className="landing-pricing-check">✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="landing-pricing-price">
+                {plan.price}
+                <span className="landing-pricing-price-note">{plan.priceNote}</span>
+              </div>
+              <a
+                className="landing-pricing-cta"
+                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Tanya ${plan.name} SendagoMail`)}`}
+              >
+                Hubungi Kami
+              </a>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <footer className="landing-footer">
         <div className="landing-nav-brand">
