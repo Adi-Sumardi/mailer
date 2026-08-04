@@ -2,6 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
 import type { ApiCredential, ApiCredentialWithSecret, Tenant } from '../../lib/types';
+import IntegrationCodeSamples from '../../components/IntegrationCodeSamples';
+
+const API_BASE_URL = 'https://sendagomail.adilabs.id';
 
 export default function IntegrationSettingsPage() {
   const { user } = useAuth();
@@ -124,80 +127,14 @@ export default function IntegrationSettingsPage() {
 
       {error && <p className="form-error">{error}</p>}
 
-      {/* SendagoMail Transactional SMTP Server Credentials Card */}
-      <div
-        style={{
-          background: 'var(--color-surface-variant)',
-          border: '1px solid var(--color-outline-variant)',
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '32px',
-          marginTop: '24px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          <h2 style={{ fontSize: '18px', margin: 0 }}>📡 SendagoMail Transactional SMTP Server Credentials</h2>
-        </div>
-        <p style={{ fontSize: '13px', opacity: 0.85, margin: '0 0 16px 0' }}>
-          Gunakan alamat server SMTP SendagoMail di bawah ini pada aplikasi backend Anda (mirip SendGrid / Mailgun / Amazon SES) untuk mengirimkan email transaksional secara otomatis.
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-          <div style={{ background: 'var(--color-background)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--color-outline-variant)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', display: 'block' }}>SMTP HOST</span>
-            <code style={{ fontSize: '14px', fontWeight: 'bold' }}>sendagomail.adilabs.id</code>
-          </div>
-
-          <div style={{ background: 'var(--color-background)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--color-outline-variant)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', display: 'block' }}>PORTS</span>
-            <code style={{ fontSize: '14px', fontWeight: 'bold' }}>587 (TLS), 465 (SSL), 25</code>
-          </div>
-
-          <div style={{ background: 'var(--color-background)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--color-outline-variant)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', display: 'block' }}>AUTHENTICATION</span>
-            <code style={{ fontSize: '14px', fontWeight: 'bold' }}>Member ID & Secret Key</code>
-          </div>
-
-          <div style={{ background: 'var(--color-background)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--color-outline-variant)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', display: 'block' }}>SECURITY & SIGNING</span>
-            <code style={{ fontSize: '14px', fontWeight: 'bold' }}>Automated DKIM + SPF</code>
-          </div>
-        </div>
-
-        {/* Code Snippet Example */}
-        <div>
-          <strong style={{ fontSize: '13px', display: 'block', marginBottom: '8px' }}>💻 Contoh Kode Integrasi Node.js (Nodemailer):</strong>
-          <pre
-            style={{
-              background: '#1e1e1e',
-              color: '#d4d4d4',
-              padding: '14px 18px',
-              borderRadius: '10px',
-              fontSize: '12px',
-              overflowX: 'auto',
-              margin: 0,
-            }}
-          >
-{`const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: 'sendagomail.adilabs.id',
-  port: 587,
-  auth: {
-    user: 'MEMBER_ID_ANDA', // Buat credential di tabel bawah
-    pass: 'SECRET_KEY_ANDA',
-  },
-});
-
-await transporter.sendMail({
-  from: 'no-reply@domain-anda.com',
-  to: 'penerima@gmail.com',
-  subject: 'Notifikasi Transaksional SendagoMail',
-  text: 'Pesan transaksional berhasil dikirim melalui SendagoMail Engine.',
-});`}
-          </pre>
-        </div>
-      </div>
+      {/* Dokumentasi REST API — bukan SMTP. Endpoint /emails/api-send memvalidasi
+          memberId+secret ke auth-service, mengonsumsi kuota, lalu mengirim lewat mailbox
+          yang terikat ke credential (lihat ApiCredentialService.resolveMailboxId di backend). */}
+      <IntegrationCodeSamples
+        baseUrl={API_BASE_URL}
+        exampleMemberId={newCredential?.memberId ?? credentials[0]?.memberId ?? 'MEMBER_ID_ANDA'}
+        exampleSecret={newCredential?.secret}
+      />
 
       <table className="admin-table">
         <thead>

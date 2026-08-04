@@ -1091,3 +1091,130 @@ select:focus {
   font-family: var(--font-mono);
   font-size: 13px;
 }
+
+/* ===== Integration docs (code samples) ===== */
+.integration-docs {
+  background: var(--color-surface-variant);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin: var(--space-lg) 0;
+}
+
+.integration-docs-title {
+  font-size: 18px;
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.integration-docs-desc {
+  font-size: 13px;
+  opacity: 0.85;
+  margin: 0 0 var(--space-md) 0;
+  line-height: 1.5;
+}
+
+.integration-endpoint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.integration-endpoint-method {
+  background: var(--color-success);
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.integration-params {
+  margin-bottom: var(--space-md);
+}
+
+.integration-params td code {
+  font-size: 12px;
+}
+
+.integration-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 0;
+}
+
+.integration-tab {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  border-bottom: none;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.integration-tab.active {
+  background: #1e1e1e;
+  color: white;
+  font-weight: 600;
+}
+
+.integration-code-block {
+  position: relative;
+  background: #1e1e1e;
+  border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
+  overflow: hidden;
+}
+
+.integration-code-block pre {
+  margin: 0;
+  padding: 18px;
+  overflow-x: auto;
+  color: #d4d4d4;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.integration-copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.integration-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.integration-response {
+  margin-top: var(--space-md);
+  font-size: 13px;
+}
+
+.integration-response strong {
+  display: block;
+  margin: var(--space-sm) 0 var(--space-xs) 0;
+}
+
+.integration-response pre {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
