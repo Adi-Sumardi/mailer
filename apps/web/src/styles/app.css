@@ -1768,6 +1768,16 @@ select:focus {
   max-width: 720px;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-lg);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-hero-icon {
+  font-size: 28px;
+  margin-bottom: var(--space-sm);
 }
 
 .landing-hero h1 {
@@ -1783,50 +1793,15 @@ select:focus {
   margin: 0 0 var(--space-lg) 0;
 }
 
+.landing-hero .landing-carousel-dots {
+  margin-bottom: var(--space-lg);
+}
+
 .landing-hero-actions {
   display: flex;
   gap: var(--space-md);
   justify-content: center;
   flex-wrap: wrap;
-}
-
-/* Simple text carousel — satu kartu ringkas yang bergantian, bukan gambar besar */
-.landing-text-carousel {
-  max-width: 560px;
-  margin: 0 auto var(--space-lg) auto;
-  padding: 0 var(--space-lg);
-  text-align: center;
-}
-
-.landing-text-carousel-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg) var(--space-xl);
-  min-height: 132px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.landing-text-carousel-icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.landing-text-carousel-card h2 {
-  font-size: 18px;
-  margin: 0;
-  color: var(--color-on-surface);
-}
-
-.landing-text-carousel-card p {
-  font-size: 13px;
-  color: var(--color-on-surface-variant);
-  margin: 0;
-  max-width: 420px;
 }
 
 .landing-carousel-dots {

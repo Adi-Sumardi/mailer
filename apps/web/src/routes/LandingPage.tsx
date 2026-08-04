@@ -112,27 +112,9 @@ export default function LandingPage() {
       </header>
 
       <section className="landing-hero">
-        <h1>Platform Email Multi-Tenant, Self-Hosted, Milik Anda Sendiri</h1>
-        <p>
-          Kirim &amp; terima email dengan domain Anda sendiri, integrasikan OTP/notifikasi lewat API,
-          dan otomatiskan inbox — tanpa biaya langganan bulanan pihak ketiga.
-        </p>
-        <div className="landing-hero-actions">
-          <Link to="/register" className="btn-primary btn-lg">
-            Mulai Gratis →
-          </Link>
-          <Link to="/login" className="btn-ghost btn-lg">
-            Sudah punya akun? Login
-          </Link>
-        </div>
-      </section>
-
-      <section className="landing-text-carousel">
-        <div className="landing-text-carousel-card">
-          <span className="landing-text-carousel-icon">{slide.icon}</span>
-          <h2>{slide.title}</h2>
-          <p>{slide.desc}</p>
-        </div>
+        <span className="landing-hero-icon">{slide.icon}</span>
+        <h1>{slide.title}</h1>
+        <p>{slide.desc}</p>
         <div className="landing-carousel-dots">
           {CAROUSEL_SLIDES.map((s, i) => (
             <button
@@ -142,6 +124,14 @@ export default function LandingPage() {
               aria-label={`Slide ${i + 1}`}
             />
           ))}
+        </div>
+        <div className="landing-hero-actions">
+          <Link to="/register" className="btn-primary btn-lg">
+            Mulai Gratis →
+          </Link>
+          <Link to="/login" className="btn-ghost btn-lg">
+            Sudah punya akun? Login
+          </Link>
         </div>
       </section>
 
