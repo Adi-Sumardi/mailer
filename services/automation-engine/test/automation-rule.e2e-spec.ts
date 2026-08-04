@@ -177,4 +177,120 @@ describe('Automation Rule (e2e) — FR-19 s/d FR-21', () => {
       .expect(200);
     expect(listForB.body).toHaveLength(0);
   });
+
+  it('menolak actionType ai_agent tanpa aiProvider/aiModel/aiApiKey (400)', async () => {
+    await request(app.getHttpServer())
+      .post('/automation-rules')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({
+        name: 'AI tanpa config',
+        conditionField: 'subject',
+        conditionValue: 'urgent',
+        actionType: 'ai_agent',
+      })
+      .expect(400);
+  });
+
+  it('membuat aturan ai_agent — API key TIDAK PERNAH dikembalikan mentah, hanya masked preview', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/automation-rules')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({
+        name: 'AI triage urgent',
+        conditionField: 'subject',
+        conditionValue: 'urgent',
+        actionType: 'ai_agent',
+        aiProvider: 'anthropic',
+        aiModel: 'claude-sonnet-5',
+        aiApiKey: 'sk-ant-supersecretvalue123456',
+      })
+      .expect(201);
+
+    expect(created.body.aiProvider).toBe('anthropic');
+    expect(created.body.aiModel).toBe('claude-sonnet-5');
+    expect(created.body.aiApiKeyMasked).toBe('sk-a••••3456');
+    expect(created.body.aiApiKeyEncrypted).toBeUndefined();
+    expect(JSON.stringify(created.body)).not.toContain('supersecretvalue');
+
+    const list = await request(app.getHttpServer())
+      .get('/automation-rules')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+    expect(JSON.stringify(list.body)).not.toContain('supersecretvalue');
+  });
+
+  it('update ai_agent tanpa mengisi ulang aiApiKey tetap mempertahankan key lama (masked sama)', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/automation-rules')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({
+        name: 'AI triage',
+        conditionField: 'subject',
+        conditionValue: 'urgent',
+        actionType: 'ai_agent',
+        aiProvider: 'openai',
+        aiModel: 'gpt-4o-mini',
+        aiApiKey: 'sk-openai-originalvalue7890',
+      })
+      .expect(201);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/automation-rules/${created.body.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ name: 'AI triage (renamed)' })
+      .expect(200);
+
+    expect(updated.body.name).toBe('AI triage (renamed)');
+    expect(updated.body.aiApiKeyMasked).toBe(created.body.aiApiKeyMasked);
+  });
+
+  it('berpindah dari ai_agent ke actionType lain membersihkan field AI', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/automation-rules')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({
+        name: 'AI lalu batal',
+        conditionField: 'subject',
+        conditionValue: 'urgent',
+        actionType: 'ai_agent',
+        aiProvider: 'openai',
+        aiModel: 'gpt-4o-mini',
+        aiApiKey: 'sk-openai-value',
+      })
+      .expect(201);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/automation-rules/${created.body.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ actionType: 'delete' })
+      .expect(200);
+
+    expect(updated.body.aiProvider).toBeNull();
+    expect(updated.body.aiModel).toBeNull();
+    expect(updated.body.aiApiKeyMasked).toBeNull();
+  });
+
+  it('GET /:id juga tidak pernah bocorkan aiApiKeyEncrypted', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/automation-rules')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({
+        name: 'AI triage detail',
+        conditionField: 'subject',
+        conditionValue: 'urgent',
+        actionType: 'ai_agent',
+        aiProvider: 'openai',
+        aiModel: 'gpt-4o-mini',
+        aiApiKey: 'sk-openai-detailvalue',
+      })
+      .expect(201);
+
+    const fetched = await request(app.getHttpServer())
+      .get(`/automation-rules/${created.body.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+
+    expect(fetched.body.aiApiKeyEncrypted).toBeUndefined();
+    expect(JSON.stringify(fetched.body)).not.toContain('detailvalue');
+  });
 });

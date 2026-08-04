@@ -33,7 +33,7 @@ export class AutomationRuleController {
 
   @Get(':id')
   findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
-    return this.automationRuleService.findOneOrThrow(user.sub, id);
+    return this.automationRuleService.findOnePublic(user.sub, id);
   }
 
   // FR-21: field isActive di body untuk aktif/nonaktifkan tanpa hapus

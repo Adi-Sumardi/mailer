@@ -23,6 +23,12 @@ enum ActionType {
   forward
   auto_reply
   delete
+  ai_agent
+}
+
+enum AiProvider {
+  openai
+  anthropic
 }
 
 model AutomationRule {
@@ -40,6 +46,17 @@ model AutomationRule {
   // sesuai actionType (nama folder / alamat forward / isi auto-reply, tidak dipakai untuk delete).
   actionType  ActionType @map("action_type")
   actionValue String?    @map("action_value")
+
+  // Konfigurasi AI agent — hanya diisi kalau actionType = ai_agent. API key TIDAK PERNAH
+  // disimpan plaintext (dienkripsi AES-256-GCM, lihat ai-key-crypto.util.ts) dan TIDAK PERNAH
+  // dikembalikan mentah lewat API (lihat toPublic() di service). Eksekusi LLM sungguhan BELUM
+  // diimplementasikan — lihat README, ini baru fondasi konfigurasi (FR terkait AI agent).
+  aiProvider        AiProvider? @map("ai_provider")
+  aiModel           String?     @map("ai_model")
+  aiApiKeyEncrypted String?     @map("ai_api_key_encrypted")
+  // Preview aman ditampilkan berulang di UI (mis. "sk-p...ab3x") — dihitung sekali saat
+  // create/update, supaya tidak perlu dekripsi tiap kali list/GET rule ini.
+  aiApiKeyMasked    String?     @map("ai_api_key_masked")
 
   // FR-21: aktif/nonaktifkan tanpa hapus
   isActive Boolean @default(true) @map("is_active")
