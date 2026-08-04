@@ -43,7 +43,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route element={<RoleRoute allow={['end_user', 'super_admin']} />}>
+              <Route element={<RoleRoute allow={['end_user', 'tenant_admin', 'super_admin']} />}>
                 <Route path="/inbox" element={<InboxPage />} />
               </Route>
               <Route element={<RoleRoute allow={['end_user', 'tenant_admin', 'super_admin']} />}>
