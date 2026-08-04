@@ -1939,17 +1939,13 @@ select:focus {
 .landing-pricing-cta {
   display: block;
   text-align: center;
-  background: var(--color-success);
+  background: var(--color-primary-accent);
   color: white;
   font-weight: 700;
   font-size: 14px;
   padding: 12px 20px;
   border-radius: var(--radius-md);
   text-decoration: none;
-}
-
-.accent-teal .landing-pricing-cta {
-  background: #0f766e;
 }
 
 /* Footer */
