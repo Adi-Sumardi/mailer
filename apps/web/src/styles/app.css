@@ -1801,6 +1801,10 @@ select:focus {
   max-width: 1200px;
 }
 
+.landing-carousel-image .landing-carousel-track {
+  height: 320px;
+}
+
 .landing-carousel-track {
   display: flex;
   border-radius: var(--radius-lg);
@@ -1812,8 +1816,17 @@ select:focus {
 .landing-carousel-slide-img {
   flex: 0 0 100%;
   width: 100%;
-  height: auto;
+  height: 320px;
+  object-fit: cover;
+  object-position: top center;
   display: block;
+}
+
+@media (min-width: 720px) {
+  .landing-carousel-image .landing-carousel-track,
+  .landing-carousel-slide-img {
+    height: 420px;
+  }
 }
 
 .landing-carousel-dots {
