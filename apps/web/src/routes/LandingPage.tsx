@@ -125,23 +125,7 @@ export default function LandingPage() {
             />
           ))}
         </div>
-        <div className="landing-hero-actions">
-          <Link to="/register" className="btn-primary btn-lg">
-            Mulai Gratis →
-          </Link>
-          <Link to="/login" className="btn-ghost btn-lg">
-            Sudah punya akun? Login
-          </Link>
-        </div>
       </section>
-
-      <div className="landing-feature-tags">
-        {FEATURE_TAGS.map((f) => (
-          <span key={f.label} className="landing-feature-tag">
-            {f.icon} {f.label}
-          </span>
-        ))}
-      </div>
 
       <section className="landing-pricing">
         <h2 className="landing-section-title">Pilih Paket SendagoMail</h2>
@@ -177,6 +161,14 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      <div className="landing-feature-tags">
+        {FEATURE_TAGS.map((f) => (
+          <span key={f.label} className="landing-feature-tag">
+            {f.icon} {f.label}
+          </span>
+        ))}
+      </div>
 
       <footer className="landing-footer">
         <div className="landing-nav-brand">

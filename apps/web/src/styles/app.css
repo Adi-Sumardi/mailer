@@ -1797,13 +1797,6 @@ select:focus {
   margin-bottom: var(--space-lg);
 }
 
-.landing-hero-actions {
-  display: flex;
-  gap: var(--space-md);
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
 .landing-carousel-dots {
   display: flex;
   justify-content: center;
