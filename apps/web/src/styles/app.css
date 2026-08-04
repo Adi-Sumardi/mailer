@@ -1868,27 +1868,6 @@ select:focus {
 }
 
 /* CTA band */
-.landing-cta-band {
-  text-align: center;
-  background: var(--color-primary-accent);
-  color: white;
-  padding: var(--space-xl) var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.landing-cta-band h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.landing-cta-band .btn-primary {
-  background: white;
-  color: var(--color-primary-accent);
-}
-
 /* Footer */
 .landing-footer {
   display: flex;

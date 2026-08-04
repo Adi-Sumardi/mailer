@@ -105,13 +105,6 @@ export default function LandingPage() {
         ))}
       </div>
 
-      <section className="landing-cta-band">
-        <h2>Siap kelola email dengan domain Anda sendiri?</h2>
-        <Link to="/register" className="btn-primary btn-lg">
-          Daftar Sekarang →
-        </Link>
-      </section>
-
       <footer className="landing-footer">
         <div className="landing-nav-brand">
           <img src="/logo.png" alt="SendagoMail" />
