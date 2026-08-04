@@ -55,7 +55,7 @@ export default function AppLayout() {
 
   async function handleLogout() {
     await logout();
-    navigate('/login');
+    navigate('/');
   }
 
   const navItems = user ? NAV_BY_ROLE[user.role] : [];
