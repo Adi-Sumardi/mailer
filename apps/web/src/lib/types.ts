@@ -15,10 +15,11 @@ export interface EmailMessage {
   toAddr: string;
   subject: string;
   body: string;
+  isHtml: boolean;
   isRead: boolean;
   isImportant: boolean;
   isSpam: boolean;
-  sendStatus: 'draft' | 'queued' | 'sent' | 'cancelled';
+  sendStatus: 'draft' | 'queued' | 'sent' | 'cancelled' | 'failed';
   recallDeadlineAt: string | null;
   recalled: boolean;
   sentAt: string | null;

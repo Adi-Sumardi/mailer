@@ -1,10 +1,69 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { api, ApiError } from '../lib/apiClient';
-import type { EmailMessage, Folder } from '../lib/types';
+import type { EmailAttachment, EmailMessage, Folder } from '../lib/types';
 import ComposeModal from '../components/ComposeModal';
 import RecallBanner from '../components/RecallBanner';
 
 const DEFAULT_RECALL_WINDOW_SECONDS = 20; // fallback tampilan sebelum dapat recallDeadlineAt sungguhan
+
+const FOLDER_ICON: Record<Folder['folderType'], string> = {
+  inbox: '📥',
+  sent: '📤',
+  draft: '📝',
+  trash: '🗑️',
+  custom: '📁',
+};
+
+const AVATAR_PALETTE = ['#e11d48', '#2563eb', '#0d9488', '#7c3aed', '#c2410c', '#0891b2', '#65a30d', '#be185d'];
+
+function avatarColorFor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+
+function initialsFor(addr: string): string {
+  const local = addr.split('@')[0] ?? addr;
+  const parts = local.split(/[._-]/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return local.slice(0, 2).toUpperCase();
+}
+
+function snippetFor(email: EmailMessage): string {
+  const plain = email.isHtml ? email.body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ') : email.body;
+  const trimmed = plain.trim();
+  return trimmed.length > 100 ? `${trimmed.slice(0, 100)}…` : trimmed;
+}
+
+function formatListDate(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+
+function formatFullDate(iso: string): string {
+  return new Date(iso).toLocaleString('id-ID', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+const STATUS_LABEL: Record<EmailMessage['sendStatus'], { text: string; className: string } | null> = {
+  draft: null,
+  sent: null,
+  queued: { text: 'Mengirim…', className: 'badge-pending' },
+  cancelled: { text: 'Dibatalkan', className: 'badge-recalled' },
+  failed: { text: 'Gagal terkirim', className: 'badge-error' },
+};
 
 interface PendingRecall {
   emailId: string;
@@ -18,11 +77,13 @@ export default function InboxPage() {
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
+  const [selectedAttachments, setSelectedAttachments] = useState<EmailAttachment[]>([]);
   const [showCompose, setShowCompose] = useState(false);
   const [composeReplyTarget, setComposeReplyTarget] = useState<EmailMessage | null>(null);
   const [pendingRecall, setPendingRecall] = useState<PendingRecall | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const loadEmails = useCallback(async (folderId: string) => {
     const list = await api.get<EmailMessage[]>(`/emails/folder/${folderId}`);
@@ -50,6 +111,7 @@ export default function InboxPage() {
   async function handleSelectFolder(folderId: string) {
     setActiveFolderId(folderId);
     setSelectedEmail(null);
+    setSearchTerm('');
     setIsLoading(true);
     await loadEmails(folderId).catch((err) =>
       setError(err instanceof ApiError ? err.message : 'Gagal memuat email.'),
@@ -57,11 +119,10 @@ export default function InboxPage() {
     setIsLoading(false);
   }
 
-  const [selectedAttachments, setSelectedAttachments] = useState<import('../lib/types').EmailAttachment[]>([]);
-
   async function handleSelectEmail(email: EmailMessage) {
     setSelectedEmail(email);
-    api.get<import('../lib/types').EmailAttachment[]>(`/emails/${email.id}/attachments`)
+    api
+      .get<EmailAttachment[]>(`/emails/${email.id}/attachments`)
       .then((atts) => setSelectedAttachments(atts))
       .catch(() => setSelectedAttachments([]));
 
@@ -70,6 +131,15 @@ export default function InboxPage() {
       setEmails((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
       setSelectedEmail(updated);
     }
+  }
+
+  async function handleToggleImportant(email: EmailMessage, e: React.MouseEvent) {
+    e.stopPropagation();
+    const updated = await api.patch<EmailMessage>(`/emails/${email.id}/flags`, {
+      isImportant: !email.isImportant,
+    });
+    setEmails((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    if (selectedEmail?.id === updated.id) setSelectedEmail(updated);
   }
 
   function handleSent(email: EmailMessage) {
@@ -107,8 +177,26 @@ export default function InboxPage() {
     if (activeFolderId) loadEmails(activeFolderId).catch(() => undefined);
   }
 
+  const visibleEmails = useMemo(() => {
+    if (!searchTerm.trim()) return emails;
+    const q = searchTerm.trim().toLowerCase();
+    return emails.filter(
+      (e) =>
+        e.subject.toLowerCase().includes(q) ||
+        e.fromAddr.toLowerCase().includes(q) ||
+        e.toAddr.toLowerCase().includes(q) ||
+        e.body.toLowerCase().includes(q),
+    );
+  }, [emails, searchTerm]);
+
+  const sanitizedBody = useMemo(() => {
+    if (!selectedEmail) return '';
+    if (!selectedEmail.isHtml) return '';
+    return DOMPurify.sanitize(selectedEmail.body, { USE_PROFILES: { html: true } });
+  }, [selectedEmail]);
+
   return (
-    <div className="inbox-page">
+    <div className="mail-page">
       {pendingRecall && (
         <RecallBanner
           toAddr={pendingRecall.toAddr}
@@ -119,71 +207,143 @@ export default function InboxPage() {
         />
       )}
 
-      <div className="inbox-toolbar">
-        <button className="btn-primary" onClick={() => setShowCompose(true)}>
-          Compose
-        </button>
-        <div className="folder-tabs">
-          {folders.map((folder) => (
-            <button
-              key={folder.id}
-              className={`folder-tab${folder.id === activeFolderId ? ' active' : ''}`}
-              onClick={() => handleSelectFolder(folder.id)}
-            >
-              {folder.folderName}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="mail-body">
+        <aside className="mail-rail">
+          <button className="btn-compose" onClick={() => setShowCompose(true)}>
+            <span className="btn-compose-icon">✎</span> Tulis
+          </button>
+          <nav className="mail-folder-nav">
+            {folders.map((folder) => {
+              const unreadCount =
+                folder.folderType === 'inbox'
+                  ? emails.filter((e) => e.folderId === folder.id && !e.isRead).length
+                  : 0;
+              return (
+                <button
+                  key={folder.id}
+                  className={`mail-folder-item${folder.id === activeFolderId ? ' active' : ''}`}
+                  onClick={() => handleSelectFolder(folder.id)}
+                >
+                  <span className="mail-folder-icon">{FOLDER_ICON[folder.folderType]}</span>
+                  <span className="mail-folder-name">{folder.folderName}</span>
+                  {folder.id === activeFolderId && unreadCount > 0 && (
+                    <span className="mail-folder-count">{unreadCount}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-      {error && <p className="form-error">{error}</p>}
+        <section className="mail-list-pane">
+          <div className="mail-search">
+            <span className="mail-search-icon">🔍</span>
+            <input
+              type="search"
+              placeholder="Cari email…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-      <div className="inbox-body">
-        <ul className="email-list">
-          {isLoading && <li className="email-list-empty">Memuat…</li>}
-          {!isLoading && emails.length === 0 && <li className="email-list-empty">Tidak ada email.</li>}
-          {emails.map((email) => (
-            <li
-              key={email.id}
-              className={`email-list-item${email.isRead ? '' : ' unread'}${
-                selectedEmail?.id === email.id ? ' selected' : ''
-              }`}
-              onClick={() => handleSelectEmail(email)}
-            >
-              <div className="email-list-item-from">{email.fromAddr}</div>
-              <div className="email-list-item-subject">{email.subject}</div>
-              {email.sendStatus === 'queued' && <span className="badge badge-pending">Mengirim…</span>}
-              {email.recalled && <span className="badge badge-recalled">Ditarik</span>}
-            </li>
-          ))}
-        </ul>
+          {error && <p className="form-error">{error}</p>}
 
-        <div className="email-detail">
+          <ul className="email-list">
+            {isLoading && <li className="email-list-empty">Memuat…</li>}
+            {!isLoading && visibleEmails.length === 0 && (
+              <li className="email-list-empty">
+                {searchTerm ? 'Tidak ada hasil.' : 'Tidak ada email di folder ini.'}
+              </li>
+            )}
+            {visibleEmails.map((email) => {
+              const counterpart =
+                activeFolderId && folders.find((f) => f.id === activeFolderId)?.folderType === 'sent'
+                  ? email.toAddr
+                  : email.fromAddr;
+              const status = STATUS_LABEL[email.sendStatus];
+              return (
+                <li
+                  key={email.id}
+                  className={`email-list-item${email.isRead ? '' : ' unread'}${
+                    selectedEmail?.id === email.id ? ' selected' : ''
+                  }`}
+                  onClick={() => handleSelectEmail(email)}
+                >
+                  <div
+                    className="email-avatar"
+                    style={{ background: avatarColorFor(counterpart) }}
+                    aria-hidden="true"
+                  >
+                    {initialsFor(counterpart)}
+                  </div>
+                  <div className="email-list-item-main">
+                    <div className="email-list-item-row">
+                      <span className="email-list-item-from">{counterpart}</span>
+                      <span className="email-list-item-date">{formatListDate(email.createdAt)}</span>
+                    </div>
+                    <div className="email-list-item-row">
+                      <span className="email-list-item-subject">{email.subject || '(tanpa subjek)'}</span>
+                    </div>
+                    <div className="email-list-item-snippet">{snippetFor(email)}</div>
+                    {(status || email.recalled) && (
+                      <div>
+                        {status && <span className={`badge ${status.className}`}>{status.text}</span>}
+                        {email.recalled && <span className="badge badge-recalled">Ditarik</span>}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className={`email-star${email.isImportant ? ' active' : ''}`}
+                    onClick={(e) => handleToggleImportant(email, e)}
+                    aria-label="Tandai penting"
+                    title="Tandai penting"
+                  >
+                    {email.isImportant ? '★' : '☆'}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section className="email-detail">
           {selectedEmail ? (
             <>
-              <h2>{selectedEmail.subject}</h2>
-              <p className="email-detail-meta">
-                Dari <strong>{selectedEmail.fromAddr}</strong> ke {selectedEmail.toAddr}
-              </p>
-              <p className="email-detail-body">{selectedEmail.body}</p>
+              <div className="email-detail-header">
+                <h2>{selectedEmail.subject || '(tanpa subjek)'}</h2>
+                <div className="email-detail-from-row">
+                  <div
+                    className="email-avatar email-avatar-lg"
+                    style={{ background: avatarColorFor(selectedEmail.fromAddr) }}
+                    aria-hidden="true"
+                  >
+                    {initialsFor(selectedEmail.fromAddr)}
+                  </div>
+                  <div className="email-detail-from-meta">
+                    <div>
+                      <strong>{selectedEmail.fromAddr}</strong>
+                    </div>
+                    <div className="email-detail-meta">
+                      kepada {selectedEmail.toAddr} · {formatFullDate(selectedEmail.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="email-detail-body">
+                {selectedEmail.isHtml ? (
+                  <div className="email-html-body" dangerouslySetInnerHTML={{ __html: sanitizedBody }} />
+                ) : (
+                  <p className="email-plain-body">{selectedEmail.body}</p>
+                )}
+              </div>
 
               {selectedAttachments.length > 0 && (
-                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-outline-variant)' }}>
-                  <strong style={{ fontSize: '13px', display: 'block', marginBottom: '8px' }}>
-                    📎 Lampiran File ({selectedAttachments.length}):
-                  </strong>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div className="email-attachments">
+                  <strong>📎 Lampiran ({selectedAttachments.length}):</strong>
+                  <div className="email-attachments-list">
                     {selectedAttachments.map((att) => (
-                      <div
-                        key={att.id}
-                        style={{
-                          background: 'var(--color-surface-variant)',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          border: '1px solid var(--color-outline-variant)',
-                        }}
-                      >
+                      <div key={att.id} className="email-attachment-chip">
                         📄 <strong>{att.filename}</strong> ({att.sizeKb} KB)
                       </div>
                     ))}
@@ -199,17 +359,17 @@ export default function InboxPage() {
                     setShowCompose(true);
                   }}
                 >
-                  Balas
+                  ↩ Balas
                 </button>
                 <button className="btn-danger" onClick={() => handleDelete(selectedEmail)}>
-                  Hapus
+                  🗑 Hapus
                 </button>
               </div>
             </>
           ) : (
             <div className="email-detail-empty">Pilih email untuk membaca</div>
           )}
-        </div>
+        </section>
       </div>
 
       {showCompose && (
