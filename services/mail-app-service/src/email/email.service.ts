@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailboxService } from '../mailbox/mailbox.service';
+import { EmailTemplateService } from '../email-template/email-template.service';
 import { ComposeEmailDto } from './dto/compose-email.dto';
 import { UpdateFlagsDto } from './dto/update-flags.dto';
 import { SearchEmailDto } from './dto/search-email.dto';
@@ -22,6 +23,20 @@ import { AddAttachmentDto } from './dto/add-attachment.dto';
 
 const LOGO_PATH = path.join(__dirname, 'assets', 'adilabs-logo.png');
 const LOGO_CID = 'adilabs-logo';
+
+interface TemplateForRender {
+  title: string | null;
+  subtitle: string | null;
+  logoPosition: 'left' | 'center' | 'right';
+  primaryColor: string;
+  accentColor: string;
+  footerText: string | null;
+  logoAbsolutePath: string | null;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 @Injectable()
 export class EmailService implements OnModuleInit, OnModuleDestroy {
@@ -31,31 +46,53 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailboxService: MailboxService,
+    private readonly emailTemplateService: EmailTemplateService,
     private readonly config: ConfigService,
   ) {}
 
   // Footer branding di setiap email yang dikirim keluar — logo dilampirkan sebagai
   // inline attachment (Content-ID), BUKAN base64 di dalam <img src>, karena banyak klien
-  // email (termasuk Gmail) memblokir/menghapus data-URI base64 di HTML email.
-  private buildBrandedHtml(bodyText: string, isHtml: boolean): string {
+  // email (termasuk Gmail) memblokir/menghapus data-URI base64 di HTML email. Kalau mailbox
+  // pengirim punya EmailTemplate kustom (lihat email-template module), pakai itu — kalau
+  // tidak, fallback ke branding default SendagoMail/adilabs (perilaku lama, tidak berubah).
+  private buildBrandedHtml(bodyText: string, isHtml: boolean, template: TemplateForRender | null): string {
     // Kalau body sudah HTML mentah (mis. template transaksional pihak ketiga), JANGAN
     // konversi newline-nya jadi <br/> — newline di source HTML (indentasi antar tag) bukan
     // baris baru yang dimaksud, dan konversi itu bikin gap vertikal raksasa di klien email.
     const renderedBody = isHtml ? bodyText : bodyText.replace(/\n/g, '<br/>');
+    const align = template?.logoPosition ?? 'left';
+    const primaryColor = template?.primaryColor ?? '#e11d48';
+    const accentColor = template?.accentColor ?? '#e2e8f0';
+    const footerText = template?.footerText ?? 'Dikirim lewat SendagoMail — produk adilabs';
+
+    // text-align (BUKAN flexbox) sengaja dipakai untuk posisi logo — banyak email client
+    // (terutama Outlook desktop) tidak mendukung flexbox, tapi text-align+inline-img universal.
+    const headerBlock =
+      template?.title || template?.subtitle
+        ? `<div style="text-align: ${align}; margin-bottom: 16px; font-family: sans-serif;">
+            ${template?.title ? `<div style="font-size: 18px; font-weight: 700; color: ${primaryColor};">${escapeHtml(template.title)}</div>` : ''}
+            ${template?.subtitle ? `<div style="font-size: 13px; color: #666; margin-top: 2px;">${escapeHtml(template.subtitle)}</div>` : ''}
+          </div>`
+        : '';
+
     return `
+      ${headerBlock}
       <div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
         ${renderedBody}
       </div>
-      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-family: sans-serif;">
-        <img src="cid:${LOGO_CID}" alt="adilabs" style="height: 24px; width: auto;" />
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid ${accentColor}; font-family: sans-serif; text-align: ${align};">
+        <img src="cid:${LOGO_CID}" alt="logo" style="height: 28px; width: auto;" />
         <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
-          Dikirim lewat SendagoMail — produk adilabs
+          ${escapeHtml(footerText)}
         </div>
       </div>
     `;
   }
 
-  private getLogoAttachment() {
+  private getLogoAttachment(template: TemplateForRender | null) {
+    if (template?.logoAbsolutePath && fs.existsSync(template.logoAbsolutePath)) {
+      return { filename: path.basename(template.logoAbsolutePath), path: template.logoAbsolutePath, cid: LOGO_CID };
+    }
     if (!fs.existsSync(LOGO_PATH)) {
       return null;
     }
@@ -226,6 +263,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
 
   private async sendDirectMx(email: {
     id: string;
+    mailboxId: string;
     fromAddr: string;
     toAddr: string;
     subject: string;
@@ -244,6 +282,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
       mxRecords.sort((a, b) => a.priority - b.priority);
       const targetMxHost = mxRecords[0].exchange;
 
+      const template = await this.emailTemplateService.getForRender(email.mailboxId);
       const attachments = await this.prisma.attachment.findMany({
         where: { emailId: email.id },
       });
@@ -265,7 +304,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
           content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
         };
       });
-      const logoAttachment = this.getLogoAttachment();
+      const logoAttachment = this.getLogoAttachment(template);
       if (logoAttachment) attachmentList.push(logoAttachment);
 
       await mxTransporter.sendMail({
@@ -273,7 +312,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
         to: email.toAddr,
         subject: email.subject,
         text: email.body,
-        html: this.buildBrandedHtml(email.body, email.isHtml),
+        html: this.buildBrandedHtml(email.body, email.isHtml, template),
         attachments: attachmentList,
       });
 
@@ -308,6 +347,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
       let success = false;
       if (transporter) {
         try {
+          const template = await this.emailTemplateService.getForRender(email.mailboxId);
           const attachments = await this.prisma.attachment.findMany({
             where: { emailId: email.id },
           });
@@ -321,7 +361,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
               content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
             };
           });
-          const logoAttachment = this.getLogoAttachment();
+          const logoAttachment = this.getLogoAttachment(template);
           if (logoAttachment) attachmentList.push(logoAttachment);
 
           await transporter.sendMail({
@@ -329,7 +369,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
             to: email.toAddr,
             subject: email.subject,
             text: email.body,
-            html: this.buildBrandedHtml(email.body, email.isHtml),
+            html: this.buildBrandedHtml(email.body, email.isHtml, template),
             attachments: attachmentList,
           });
           this.logger.log(`Email ${email.id} successfully sent via SMTP Transport to ${email.toAddr}`);

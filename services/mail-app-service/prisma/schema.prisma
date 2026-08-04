@@ -23,6 +23,12 @@ enum SendStatus {
   failed
 }
 
+enum LogoPosition {
+  left
+  center
+  right
+}
+
 model Mailbox {
   id           String   @id @default(uuid()) @map("mailbox_id")
   userId       String   @unique @map("user_id")
@@ -31,10 +37,35 @@ model Mailbox {
   usedMb       Int      @default(0) @map("used_mb")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  folders Folder[]
-  emails  Email[]
+  folders  Folder[]
+  emails   Email[]
+  template EmailTemplate?
 
   @@map("mailbox")
+}
+
+// Branding kustom untuk footer email terkirim dari mailbox ini (logo, warna, judul/subjudul) —
+// menggantikan footer default SendagoMail/adilabs kalau diisi. Satu mailbox = satu template.
+model EmailTemplate {
+  id        String  @id @default(uuid()) @map("template_id")
+  mailboxId String  @unique @map("mailbox_id")
+  mailbox   Mailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  logoFilename String? @map("logo_filename") // nama file di disk, lihat TEMPLATE_LOGOS_DIR
+  logoPosition LogoPosition @default(left) @map("logo_position")
+
+  title    String? // mis. nama produk/brand, ditampilkan di atas isi email
+  subtitle String?
+
+  primaryColor String @default("#e11d48") @map("primary_color")
+  accentColor  String @default("#0b1c30") @map("accent_color")
+
+  footerText String? @map("footer_text") // default: "Dikirim lewat SendagoMail" kalau kosong
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("email_template")
 }
 
 model Folder {

@@ -3,6 +3,7 @@
 *.env.local
 **/config/opendkim/keys/
 services/domain-provisioning/test/.tmp-dkim-keys/
+services/mail-app-service/test/.tmp-template-logos/
 
 # Dependencies
 node_modules/

@@ -71,6 +71,10 @@ services:
       SMTP_SECURE: "false"
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
+      TEMPLATE_LOGOS_DIR: /app/template-logos
+    volumes:
+      # Logo template branding per mailbox — named volume, persist lintas rebuild/redeploy.
+      - template-logos:/app/template-logos
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on: [postgres]
@@ -136,3 +140,4 @@ networks:
 
 volumes:
   pgdata:
+  template-logos:

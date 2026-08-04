@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { MailboxModule } from './mailbox/mailbox.module';
 import { FolderModule } from './folder/folder.module';
 import { EmailModule } from './email/email.module';
+import { EmailTemplateModule } from './email-template/email-template.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { EmailModule } from './email/email.module';
     MailboxModule,
     FolderModule,
     EmailModule,
+    EmailTemplateModule,
   ],
 })
 export class AppModule {}
