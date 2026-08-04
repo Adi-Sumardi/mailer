@@ -5,6 +5,7 @@ import RoleRoute from './routes/RoleRoute';
 import AppLayout from './components/AppLayout';
 import LoginPage from './routes/LoginPage';
 import RegisterPage from './routes/RegisterPage';
+import DashboardPage from './routes/DashboardPage';
 import InboxPage from './routes/InboxPage';
 import CalendarPage from './routes/CalendarPage';
 import TasksPage from './routes/TasksPage';
@@ -15,9 +16,7 @@ import IntegrationSettingsPage from './routes/admin/IntegrationSettingsPage';
 import UsersPage from './routes/admin/UsersPage';
 import PackagesPage from './routes/admin/PackagesPage';
 
-// Redirect default ("/") ke halaman pertama yang relevan untuk role user yang login —
-// super_admin tidak punya mailbox, jadi tidak boleh diarahkan ke /inbox (lihat bug 500
-// yang pernah terjadi sebelum ini ada).
+// Redirect default ("/") ke dashboard ringkasan — sama untuk semua role, lihat DashboardPage.
 function HomeRedirect() {
   const { user, isLoading } = useAuth();
 
@@ -28,9 +27,7 @@ function HomeRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  const target =
-    user.role === 'super_admin' ? '/admin/tenants' : user.role === 'tenant_admin' ? '/admin/domains' : '/inbox';
-  return <Navigate to={target} replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -44,6 +41,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route element={<RoleRoute allow={['end_user', 'tenant_admin', 'super_admin']} />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/inbox" element={<InboxPage />} />
               </Route>
               <Route element={<RoleRoute allow={['end_user', 'tenant_admin', 'super_admin']} />}>

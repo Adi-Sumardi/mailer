@@ -50,8 +50,11 @@ export interface AutomationRule {
   conditionField: 'sender' | 'subject' | 'body';
   conditionOperator: 'contains' | 'equals';
   conditionValue: string;
-  actionType: 'move_folder' | 'forward' | 'auto_reply' | 'delete';
+  actionType: 'move_folder' | 'forward' | 'auto_reply' | 'delete' | 'ai_agent';
   actionValue: string | null;
+  aiProvider: 'openai' | 'anthropic' | null;
+  aiModel: string | null;
+  aiApiKeyMasked: string | null;
   isActive: boolean;
 }
 

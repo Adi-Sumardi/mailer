@@ -3,6 +3,7 @@ import { useAuth, type CurrentUser } from '../context/AuthContext';
 
 const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> = {
   super_admin: [
+    { to: '/dashboard', label: 'Dashboard' },
     { to: '/admin/tenants', label: 'Manajemen Tenant' },
     { to: '/admin/users', label: 'Manajemen User' },
     { to: '/admin/packages', label: 'Manajemen Paket' },
@@ -13,6 +14,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
     { to: '/automation-rules', label: 'Automation' },
   ],
   tenant_admin: [
+    { to: '/dashboard', label: 'Dashboard' },
     { to: '/inbox', label: 'Mail' },
     { to: '/admin/domains', label: 'Manajemen Domain' },
     { to: '/admin/users', label: 'Manajemen User' },
@@ -23,6 +25,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
     { to: '/automation-rules', label: 'Automation' },
   ],
   end_user: [
+    { to: '/dashboard', label: 'Dashboard' },
     { to: '/inbox', label: 'Mail' },
     { to: '/calendar', label: 'Kalender' },
     { to: '/tasks', label: 'Tugas' },
