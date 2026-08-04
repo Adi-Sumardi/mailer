@@ -1768,7 +1768,7 @@ select:focus {
   max-width: 720px;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-lg);
-  min-height: 360px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
   align-items: center;
