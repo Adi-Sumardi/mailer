@@ -22,7 +22,7 @@ export default function RegisterPage() {
       // (dibuat Super Admin/Tenant Admin lewat domain-provisioning). Alur tenant_admin/
       // super_admin onboarding belum ada layar terpisah — lihat README.
       await register({ email, password, role: 'end_user', tenantId });
-      navigate('/inbox');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal mendaftar, coba lagi.');
     } finally {

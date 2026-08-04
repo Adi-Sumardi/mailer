@@ -3,10 +3,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import RoleRoute from './routes/RoleRoute';
 import AppLayout from './components/AppLayout';
+import LandingPage from './routes/LandingPage';
 import LoginPage from './routes/LoginPage';
 import RegisterPage from './routes/RegisterPage';
 import DashboardPage from './routes/DashboardPage';
 import InboxPage from './routes/InboxPage';
+import TemplatePage from './routes/TemplatePage';
 import CalendarPage from './routes/CalendarPage';
 import TasksPage from './routes/TasksPage';
 import AutomationRulesPage from './routes/AutomationRulesPage';
@@ -16,18 +18,29 @@ import IntegrationSettingsPage from './routes/admin/IntegrationSettingsPage';
 import UsersPage from './routes/admin/UsersPage';
 import PackagesPage from './routes/admin/PackagesPage';
 
-// Redirect default ("/") ke dashboard ringkasan — sama untuk semua role, lihat DashboardPage.
-function HomeRedirect() {
+// "/" untuk pengunjung belum login = landing page publik. Untuk user yang sudah login,
+// redirect ke dashboard ringkasan (sama untuk semua role, lihat DashboardPage).
+function Home() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <div className="page-loading">Memuat…</div>;
   }
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <LandingPage />;
   }
 
   return <Navigate to="/dashboard" replace />;
+}
+
+// Rute tak dikenal ("*") tetap diarahkan ke halaman yang relevan, bukan landing page.
+function NotFoundRedirect() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="page-loading">Memuat…</div>;
+  }
+  return <Navigate to={user ? '/dashboard' : '/login'} replace />;
 }
 
 function App() {
@@ -43,6 +56,7 @@ function App() {
               <Route element={<RoleRoute allow={['end_user', 'tenant_admin', 'super_admin']} />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/inbox" element={<InboxPage />} />
+                <Route path="/template" element={<TemplatePage />} />
               </Route>
               <Route element={<RoleRoute allow={['end_user', 'tenant_admin', 'super_admin']} />}>
                 <Route path="/calendar" element={<CalendarPage />} />
@@ -63,8 +77,8 @@ function App() {
             </Route>
           </Route>
 
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="*" element={<HomeRedirect />} />
+          <Route path="/" element={<Home />} />
+          <Route path="*" element={<NotFoundRedirect />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

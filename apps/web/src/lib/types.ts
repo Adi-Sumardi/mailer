@@ -26,6 +26,20 @@ export interface EmailMessage {
   createdAt: string;
 }
 
+export interface EmailTemplate {
+  id: string;
+  mailboxId: string;
+  logoFilename: string | null;
+  logoPosition: 'left' | 'center' | 'right';
+  title: string | null;
+  subtitle: string | null;
+  primaryColor: string;
+  accentColor: string;
+  footerText: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;

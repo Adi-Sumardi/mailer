@@ -9,6 +9,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
     { to: '/admin/packages', label: 'Manajemen Paket' },
     { to: '/admin/integrations', label: 'Integrasi Aplikasi' },
     { to: '/inbox', label: 'Mail' },
+    { to: '/template', label: 'Template' },
     { to: '/calendar', label: 'Kalender' },
     { to: '/tasks', label: 'Tugas' },
     { to: '/automation-rules', label: 'Automation' },
@@ -16,6 +17,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
   tenant_admin: [
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/inbox', label: 'Mail' },
+    { to: '/template', label: 'Template' },
     { to: '/admin/domains', label: 'Manajemen Domain' },
     { to: '/admin/users', label: 'Manajemen User' },
     { to: '/admin/packages', label: 'Manajemen Paket' },
@@ -27,6 +29,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
   end_user: [
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/inbox', label: 'Mail' },
+    { to: '/template', label: 'Template' },
     { to: '/calendar', label: 'Kalender' },
     { to: '/tasks', label: 'Tugas' },
     { to: '/automation-rules', label: 'Automation' },

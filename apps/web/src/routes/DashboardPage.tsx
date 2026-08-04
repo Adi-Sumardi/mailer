@@ -27,12 +27,14 @@ const QUICK_LINKS_BY_ROLE: Record<'super_admin' | 'tenant_admin' | 'end_user', Q
     { to: '/admin/packages', label: 'Manajemen Paket', icon: '📦' },
     { to: '/admin/integrations', label: 'Integrasi Aplikasi', icon: '📡' },
     { to: '/inbox', label: 'Mail', icon: '📥' },
+    { to: '/template', label: 'Template', icon: '🎨' },
     { to: '/calendar', label: 'Kalender', icon: '📅' },
     { to: '/tasks', label: 'Tugas', icon: '✅' },
     { to: '/automation-rules', label: 'Automation', icon: '🤖' },
   ],
   tenant_admin: [
     { to: '/inbox', label: 'Mail', icon: '📥' },
+    { to: '/template', label: 'Template', icon: '🎨' },
     { to: '/admin/domains', label: 'Manajemen Domain', icon: '🌐' },
     { to: '/admin/users', label: 'Manajemen User', icon: '👤' },
     { to: '/admin/packages', label: 'Manajemen Paket', icon: '📦' },
@@ -43,6 +45,7 @@ const QUICK_LINKS_BY_ROLE: Record<'super_admin' | 'tenant_admin' | 'end_user', Q
   ],
   end_user: [
     { to: '/inbox', label: 'Mail', icon: '📥' },
+    { to: '/template', label: 'Template', icon: '🎨' },
     { to: '/calendar', label: 'Kalender', icon: '📅' },
     { to: '/tasks', label: 'Tugas', icon: '✅' },
     { to: '/automation-rules', label: 'Automation', icon: '🤖' },

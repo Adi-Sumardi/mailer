@@ -111,3 +111,51 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'PATCH', body }),
   delete: <T>(path: string) => apiRequest<T>(path, { method: 'DELETE' }),
 };
+
+// PUT sungguhan (bukan alias PATCH) — dipakai endpoint yang secara semantik full-replace,
+// mis. upsert template. Nama terpisah dari api.put di atas supaya tidak mengubah perilaku
+// existing callers.
+export async function apiPutJson<T>(path: string, body: unknown): Promise<T> {
+  const token = tokenStorage.getAccessToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(res.status, errorBody.message ?? 'Terjadi kesalahan');
+  }
+  return res.json() as Promise<T>;
+}
+
+// Upload file (multipart/form-data) — TIDAK bisa lewat apiRequest() karena itu selalu
+// set Content-Type: application/json. Browser yang menentukan boundary multipart sendiri,
+// jadi Content-Type SENGAJA tidak di-set manual di sini.
+export async function apiUploadFile<T>(path: string, fieldName: string, file: File): Promise<T> {
+  const token = tokenStorage.getAccessToken();
+  const formData = new FormData();
+  formData.append(fieldName, file);
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(res.status, errorBody.message ?? 'Terjadi kesalahan');
+  }
+  return res.json() as Promise<T>;
+}
+
+// Ambil response biner (mis. preview logo) sebagai object URL siap dipakai di <img src>.
+// Endpoint gambar butuh Authorization header, jadi tidak bisa langsung dipakai sebagai <img src>.
+export async function apiGetImageObjectUrl(path: string): Promise<string | null> {
+  const token = tokenStorage.getAccessToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) return null;
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}

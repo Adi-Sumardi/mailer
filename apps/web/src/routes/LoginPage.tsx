@@ -18,7 +18,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(email, password);
-      navigate('/inbox');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal login, coba lagi.');
     } finally {
