@@ -1735,7 +1735,7 @@ select:focus {
 
 /* Running text / marquee */
 .landing-marquee {
-  background: var(--color-on-surface);
+  background: var(--color-primary);
   color: white;
   overflow: hidden;
   padding: 10px 0;
