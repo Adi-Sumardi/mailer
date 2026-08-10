@@ -51,4 +51,37 @@ describe('Mailbox provisioning (e2e) — internal API key guard', () => {
 
     expect(res.body.emailAddress).toBe('x@sendago.test');
   });
+
+  it('idempotent: retry POST /mailboxes dengan userId yang sama mengembalikan mailbox yang sama, bukan 409', async () => {
+    const first = await request(app.getHttpServer())
+      .post('/mailboxes')
+      .set('X-Internal-Api-Key', process.env.INTERNAL_API_KEY as string)
+      .send({ userId: 'user-retry', emailAddress: 'retry@sendago.test' })
+      .expect(201);
+
+    const retry = await request(app.getHttpServer())
+      .post('/mailboxes')
+      .set('X-Internal-Api-Key', process.env.INTERNAL_API_KEY as string)
+      .send({ userId: 'user-retry', emailAddress: 'retry@sendago.test' })
+      .expect(201);
+
+    expect(retry.body.id).toBe(first.body.id);
+
+    const mailboxCount = await prisma.mailbox.count({ where: { userId: 'user-retry' } });
+    expect(mailboxCount).toBe(1);
+  });
+
+  it('tetap menolak (409) kalau emailAddress sudah dipakai userId lain', async () => {
+    await request(app.getHttpServer())
+      .post('/mailboxes')
+      .set('X-Internal-Api-Key', process.env.INTERNAL_API_KEY as string)
+      .send({ userId: 'user-a', emailAddress: 'shared@sendago.test' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/mailboxes')
+      .set('X-Internal-Api-Key', process.env.INTERNAL_API_KEY as string)
+      .send({ userId: 'user-b', emailAddress: 'shared@sendago.test' })
+      .expect(409);
+  });
 });

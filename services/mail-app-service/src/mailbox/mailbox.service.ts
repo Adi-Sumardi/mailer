@@ -15,12 +15,28 @@ export class MailboxService {
   constructor(private readonly prisma: PrismaService) {}
 
   // FR-07: setiap mailbox baru otomatis punya folder Inbox/Sent/Draft/Trash.
+  //
+  // Idempotent by userId: endpoint ini dipanggil oleh auth-service (lihat
+  // MailAppClientService.provisionMailbox) yang fail-open dan retry di setiap login lewat
+  // ensureMailbox(). Kalau panggilan pertama sukses tapi response-nya gagal sampai balik ke
+  // auth-service (network blip dsb), retry berikutnya HARUS mengembalikan mailbox yang sama,
+  // bukan 409 — sebelumnya retry gagal permanen karena provisionMailbox() cuma log-and-null
+  // saat non-2xx, dan tidak ada cara mengambil mailboxId yang sudah terlanjur dibuat. Itu
+  // penyebab bug "Belum ada mailbox terprovisi" walau mailbox-nya sebenarnya sudah ada.
+  //
+  // emailAddress dipakai untuk deteksi konflik data asli (dua userId beda rebutan email sama).
   async create(dto: CreateMailboxDto) {
-    const existing = await this.prisma.mailbox.findFirst({
-      where: { OR: [{ userId: dto.userId }, { emailAddress: dto.emailAddress }] },
+    const existingByUser = await this.prisma.mailbox.findUnique({
+      where: { userId: dto.userId },
+      include: { folders: true },
     });
-    if (existing) {
-      throw new ConflictException('Mailbox untuk user/email ini sudah ada');
+    if (existingByUser) {
+      return existingByUser;
+    }
+
+    const existingByEmail = await this.prisma.mailbox.findUnique({ where: { emailAddress: dto.emailAddress } });
+    if (existingByEmail) {
+      throw new ConflictException('Mailbox untuk email ini sudah dipakai user lain');
     }
 
     return this.prisma.mailbox.create({
