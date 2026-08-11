@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth, type CurrentUser } from '../context/AuthContext';
 
@@ -52,6 +53,7 @@ function initialsFor(email: string): string {
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
@@ -61,7 +63,13 @@ export default function AppLayout() {
   const navItems = user ? NAV_BY_ROLE[user.role] : [];
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarOpen ? ' sidebar-open' : ''}`}>
+      <button
+        type="button"
+        className="sidebar-overlay"
+        aria-label="Tutup menu"
+        onClick={() => setSidebarOpen(false)}
+      />
       <aside className="sidebar">
         <div className="sidebar-brand">
           <img src="/logo.png" alt="" className="sidebar-brand-logo" />
@@ -73,6 +81,7 @@ export default function AppLayout() {
               key={item.to}
               to={item.to}
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+              onClick={() => setSidebarOpen(false)}
             >
               {item.label}
             </NavLink>
@@ -81,6 +90,14 @@ export default function AppLayout() {
       </aside>
       <div className="app-main">
         <header className="app-topbar">
+          <button
+            type="button"
+            className="sidebar-toggle"
+            aria-label="Buka menu"
+            onClick={() => setSidebarOpen((v) => !v)}
+          >
+            ☰
+          </button>
           <div className="app-topbar-spacer" />
           {user && (
             <div className="app-topbar-user">

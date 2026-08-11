@@ -136,62 +136,64 @@ export default function IntegrationSettingsPage() {
         exampleSecret={newCredential?.secret}
       />
 
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Nama</th>
-            {isSuperAdmin && <th>Tenant</th>}
-            <th>Member ID</th>
-            <th>Environment</th>
-            <th>Kuota Hari Ini</th>
-            <th>Status</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {credentials.length === 0 && (
+      <div className="table-scroll">
+        <table className="admin-table">
+          <thead>
             <tr>
-              <td colSpan={isSuperAdmin ? 7 : 6} className="email-list-empty">
-                Belum ada credential integrasi.
-              </td>
+              <th>Nama</th>
+              {isSuperAdmin && <th>Tenant</th>}
+              <th>Member ID</th>
+              <th>Environment</th>
+              <th>Kuota Hari Ini</th>
+              <th>Status</th>
+              <th>Aksi</th>
             </tr>
-          )}
-          {credentials.map((cred) => {
-            const tenant = tenants.find((t) => (cred as any).tenantId === t.id);
-            return (
-              <tr key={cred.id}>
-                <td>{cred.name}</td>
-                {isSuperAdmin && <td>{tenant?.tenantName ?? '—'}</td>}
-                <td>
-                  <code>{cred.memberId}</code>
-                </td>
-                <td>
-                  <span className={`badge badge-${cred.environment === 'production' ? 'success' : 'pending'}`}>
-                    {cred.environment}
-                  </span>
-                </td>
-                <td>
-                  {cred.emailsSentToday} / {cred.dailyEmailLimit}
-                </td>
-                <td>
-                  {cred.revokedAt ? (
-                    <span className="badge badge-recalled">Revoked</span>
-                  ) : (
-                    <span className="badge badge-success">Aktif</span>
-                  )}
-                </td>
-                <td>
-                  {!cred.revokedAt && (
-                    <button className="btn-danger" onClick={() => handleRevoke(cred.id)}>
-                      Revoke
-                    </button>
-                  )}
+          </thead>
+          <tbody>
+            {credentials.length === 0 && (
+              <tr>
+                <td colSpan={isSuperAdmin ? 7 : 6} className="email-list-empty">
+                  Belum ada credential integrasi.
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            )}
+            {credentials.map((cred) => {
+              const tenant = tenants.find((t) => (cred as any).tenantId === t.id);
+              return (
+                <tr key={cred.id}>
+                  <td>{cred.name}</td>
+                  {isSuperAdmin && <td>{tenant?.tenantName ?? '—'}</td>}
+                  <td>
+                    <code>{cred.memberId}</code>
+                  </td>
+                  <td>
+                    <span className={`badge badge-${cred.environment === 'production' ? 'success' : 'pending'}`}>
+                      {cred.environment}
+                    </span>
+                  </td>
+                  <td>
+                    {cred.emailsSentToday} / {cred.dailyEmailLimit}
+                  </td>
+                  <td>
+                    {cred.revokedAt ? (
+                      <span className="badge badge-recalled">Revoked</span>
+                    ) : (
+                      <span className="badge badge-success">Aktif</span>
+                    )}
+                  </td>
+                  <td>
+                    {!cred.revokedAt && (
+                      <button className="btn-danger" onClick={() => handleRevoke(cred.id)}>
+                        Revoke
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

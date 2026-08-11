@@ -194,64 +194,66 @@ export default function PackagesPage() {
       {isSuperAdmin ? (
         <div>
           <h2 style={{ fontSize: '18px', marginBottom: '14px' }}>Daftar Tenant & Paket Berlangganan</h2>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Nama Tenant</th>
-                <th>Tenant ID</th>
-                <th>Status Billing</th>
-                <th>Paket Berlangganan Saat Ini</th>
-                <th>Ubah Paket</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tenants.length === 0 && (
+          <div className="table-scroll">
+            <table className="admin-table">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="email-list-empty">
-                    Belum ada tenant terdaftar.
-                  </td>
+                  <th>Nama Tenant</th>
+                  <th>Tenant ID</th>
+                  <th>Status Billing</th>
+                  <th>Paket Berlangganan Saat Ini</th>
+                  <th>Ubah Paket</th>
                 </tr>
-              )}
-              {tenants.map((t) => (
-                <tr key={t.id}>
-                  <td><strong>{t.tenantName}</strong></td>
-                  <td><code>{t.id.slice(0, 8)}…</code></td>
-                  <td>
-                    <span className={`badge badge-${t.billingStatus === 'active' ? 'success' : 'pending'}`}>
-                      {t.billingStatus === 'active' ? 'Aktif' : t.billingStatus}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="badge badge-info" style={{ textTransform: 'uppercase' }}>
-                      {t.planType || 'FREE'}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <select
-                        value={editingPlanMap[t.id] ?? t.planType ?? 'free'}
-                        onChange={(e) =>
-                          setEditingPlanMap({ ...editingPlanMap, [t.id]: e.target.value })
-                        }
-                        style={{ padding: '6px 10px', borderRadius: '6px' }}
-                      >
-                        <option value="free">Starter (Free)</option>
-                        <option value="pro">Business Pro</option>
-                        <option value="enterprise">Enterprise</option>
-                      </select>
-                      <button
-                        className="btn-primary"
-                        style={{ padding: '6px 12px', fontSize: '12px' }}
-                        onClick={() => handleChangePlan(t.id, editingPlanMap[t.id] ?? 'free')}
-                      >
-                        Simpan
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tenants.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="email-list-empty">
+                      Belum ada tenant terdaftar.
+                    </td>
+                  </tr>
+                )}
+                {tenants.map((t) => (
+                  <tr key={t.id}>
+                    <td><strong>{t.tenantName}</strong></td>
+                    <td><code>{t.id.slice(0, 8)}…</code></td>
+                    <td>
+                      <span className={`badge badge-${t.billingStatus === 'active' ? 'success' : 'pending'}`}>
+                        {t.billingStatus === 'active' ? 'Aktif' : t.billingStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-info" style={{ textTransform: 'uppercase' }}>
+                        {t.planType || 'FREE'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <select
+                          value={editingPlanMap[t.id] ?? t.planType ?? 'free'}
+                          onChange={(e) =>
+                            setEditingPlanMap({ ...editingPlanMap, [t.id]: e.target.value })
+                          }
+                          style={{ padding: '6px 10px', borderRadius: '6px' }}
+                        >
+                          <option value="free">Starter (Free)</option>
+                          <option value="pro">Business Pro</option>
+                          <option value="enterprise">Enterprise</option>
+                        </select>
+                        <button
+                          className="btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          onClick={() => handleChangePlan(t.id, editingPlanMap[t.id] ?? 'free')}
+                        >
+                          Simpan
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : tenantInfo ? (
         <div style={{ background: 'var(--color-surface-variant)', padding: '20px', borderRadius: '12px' }}>

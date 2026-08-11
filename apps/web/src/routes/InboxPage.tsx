@@ -207,7 +207,7 @@ export default function InboxPage() {
         />
       )}
 
-      <div className="mail-body">
+      <div className={`mail-body${selectedEmail ? ' mail-body--detail-open' : ''}`}>
         <aside className="mail-rail">
           <button className="btn-compose" onClick={() => setShowCompose(true)}>
             <span className="btn-compose-icon">✎</span> Tulis
@@ -310,6 +310,13 @@ export default function InboxPage() {
           {selectedEmail ? (
             <>
               <div className="email-detail-header">
+                <button
+                  type="button"
+                  className="email-detail-back"
+                  onClick={() => setSelectedEmail(null)}
+                >
+                  ← Kembali ke daftar
+                </button>
                 <h2>{selectedEmail.subject || '(tanpa subjek)'}</h2>
                 <div className="email-detail-from-row">
                   <div

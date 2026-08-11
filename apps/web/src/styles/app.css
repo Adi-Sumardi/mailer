@@ -538,8 +538,71 @@ select:focus {
 .app-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.sidebar-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  padding: 4px 8px;
+  color: var(--color-on-surface);
+  flex-shrink: 0;
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+/* ===== Mobile: off-canvas sidebar drawer ===== */
+@media (max-width: 900px) {
+  .sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .app-topbar {
+    padding: 0 var(--space-md);
+    gap: var(--space-sm);
+  }
+
+  .app-topbar-email {
+    display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 32px rgba(11, 28, 48, 0.25);
+    width: min(280px, 80vw);
+  }
+
+  .app-shell.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 28, 48, 0.4);
+    border: none;
+    padding: 0;
+    z-index: 55;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .app-shell.sidebar-open .sidebar-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .page-loading {
@@ -919,8 +982,21 @@ select:focus {
   white-space: nowrap;
 }
 
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-md);
+}
+
+.table-scroll .admin-table {
+  border: none;
+  border-radius: 0;
+}
+
 .admin-table {
   width: 100%;
+  min-width: 560px;
   border-collapse: collapse;
   background: var(--color-surface);
   border: 1px solid var(--color-outline);
@@ -990,6 +1066,77 @@ select:focus {
   overflow-y: auto;
 }
 
+.email-detail-back {
+  display: none;
+}
+
+/* ===== Mobile: single-pane mail (rail as horizontal bar, list/detail swap) ===== */
+@media (max-width: 900px) {
+  .mail-body {
+    position: relative;
+    flex-direction: column;
+  }
+
+  .mail-rail {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--color-outline);
+    padding: var(--space-sm);
+    gap: var(--space-sm);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .btn-compose {
+    flex-shrink: 0;
+    padding: 10px 16px;
+    white-space: nowrap;
+  }
+
+  .mail-folder-nav {
+    flex-direction: row;
+    flex-shrink: 0;
+  }
+
+  .mail-folder-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .mail-list-pane {
+    width: 100%;
+    border-right: none;
+  }
+
+  .email-detail {
+    display: none;
+  }
+
+  .mail-body--detail-open .mail-rail,
+  .mail-body--detail-open .mail-list-pane {
+    display: none;
+  }
+
+  .mail-body--detail-open .email-detail {
+    display: block;
+    padding: var(--space-md);
+  }
+
+  .email-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--color-primary-accent);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0 0 var(--space-sm) 0;
+  }
+}
+
 .email-detail-empty {
   color: var(--color-on-surface-variant);
   display: flex;
@@ -1017,6 +1164,7 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--space-md);
   z-index: 50;
 }
 
@@ -1027,6 +1175,10 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  width: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .compose-modal {
@@ -1062,6 +1214,8 @@ select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
 }
 
 .page-header h1 {
@@ -1368,6 +1522,35 @@ select:focus {
   gap: var(--space-sm);
 }
 
+@media (max-width: 768px) {
+  .calendar-layout {
+    flex-direction: column;
+  }
+
+  .calendar-side-panel {
+    width: 100%;
+  }
+
+  .calendar-grid {
+    grid-auto-rows: minmax(58px, auto);
+  }
+
+  .calendar-day {
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .calendar-event-chip {
+    font-size: 8px;
+    padding: 0 2px;
+  }
+
+  .calendar-toolbar-title {
+    min-width: 0;
+    font-size: 14px;
+  }
+}
+
 .calendar-side-panel h3 {
   margin: 0 0 var(--space-xs) 0;
   font-size: 14px;
@@ -1422,6 +1605,12 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-md);
+}
+
+@media (max-width: 768px) {
+  .task-board {
+    grid-template-columns: 1fr;
+  }
 }
 
 .task-column {
@@ -1588,6 +1777,7 @@ select:focus {
 .integration-endpoint {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-sm);
   background: var(--color-surface);
   border: 1px solid var(--color-outline-variant);
@@ -1605,6 +1795,11 @@ select:focus {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.integration-endpoint code {
+  word-break: break-all;
 }
 
 .integration-params {
@@ -1619,6 +1814,8 @@ select:focus {
   display: flex;
   gap: 2px;
   margin-bottom: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .integration-tab {
@@ -1629,6 +1826,8 @@ select:focus {
   font-size: 13px;
   color: var(--color-on-surface-variant);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .integration-tab.active {

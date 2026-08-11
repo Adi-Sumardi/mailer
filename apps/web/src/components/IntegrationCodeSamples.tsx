@@ -157,7 +157,7 @@ export default function IntegrationCodeSamples({
         <code>{baseUrl}/emails/api-send</code>
       </div>
 
-      <div className="integration-params">
+      <div className="integration-params table-scroll">
         <table className="admin-table">
           <thead>
             <tr>

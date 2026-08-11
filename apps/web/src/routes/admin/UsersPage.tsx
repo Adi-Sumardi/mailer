@@ -253,55 +253,57 @@ export default function UsersPage() {
       )}
 
       {/* Tabel Users */}
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Role</th>
-            {isSuperAdmin && <th>Tenant</th>}
-            <th>Mailbox ID</th>
-            <th>Terdaftar</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.length === 0 && (
+      <div className="table-scroll">
+        <table className="admin-table">
+          <thead>
             <tr>
-              <td colSpan={isSuperAdmin ? 6 : 5} className="email-list-empty">
-                Belum ada user.
-              </td>
+              <th>Email</th>
+              <th>Role</th>
+              {isSuperAdmin && <th>Tenant</th>}
+              <th>Mailbox ID</th>
+              <th>Terdaftar</th>
+              <th>Aksi</th>
             </tr>
-          )}
-          {users.map((u) => {
-            const tenant = tenants.find((t) => t.id === u.tenantId);
-            return (
-              <tr key={u.id}>
-                <td><strong>{u.email}</strong></td>
-                <td>
-                  <span className={`badge ${roleBadge[u.role] ?? 'badge-pending'}`}>
-                    {roleLabel[u.role] ?? u.role}
-                  </span>
-                </td>
-                {isSuperAdmin && <td>{u.role === 'super_admin' ? '— (Global)' : (tenant?.tenantName ?? '—')}</td>}
-                <td>
-                  {u.mailboxId ? <code>{u.mailboxId.slice(0, 8)}…</code> : <span style={{ color: 'var(--color-on-surface-variant)' }}>Tanpa Mailbox</span>}
-                </td>
-                <td>{new Date(u.createdAt).toLocaleDateString('id-ID')}</td>
-                <td>
-                  <div className="task-card-actions">
-                    <button className="btn-ghost" onClick={() => startEdit(u)}>
-                      Edit Email/Password
-                    </button>
-                    <button className="btn-danger" onClick={() => handleDeleteUser(u)}>
-                      Hapus
-                    </button>
-                  </div>
+          </thead>
+          <tbody>
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={isSuperAdmin ? 6 : 5} className="email-list-empty">
+                  Belum ada user.
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            )}
+            {users.map((u) => {
+              const tenant = tenants.find((t) => t.id === u.tenantId);
+              return (
+                <tr key={u.id}>
+                  <td><strong>{u.email}</strong></td>
+                  <td>
+                    <span className={`badge ${roleBadge[u.role] ?? 'badge-pending'}`}>
+                      {roleLabel[u.role] ?? u.role}
+                    </span>
+                  </td>
+                  {isSuperAdmin && <td>{u.role === 'super_admin' ? '— (Global)' : (tenant?.tenantName ?? '—')}</td>}
+                  <td>
+                    {u.mailboxId ? <code>{u.mailboxId.slice(0, 8)}…</code> : <span style={{ color: 'var(--color-on-surface-variant)' }}>Tanpa Mailbox</span>}
+                  </td>
+                  <td>{new Date(u.createdAt).toLocaleDateString('id-ID')}</td>
+                  <td>
+                    <div className="task-card-actions">
+                      <button className="btn-ghost" onClick={() => startEdit(u)}>
+                        Edit Email/Password
+                      </button>
+                      <button className="btn-danger" onClick={() => handleDeleteUser(u)}>
+                        Hapus
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

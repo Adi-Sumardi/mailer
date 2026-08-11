@@ -71,47 +71,49 @@ export default function TenantsPage() {
 
       {error && <p className="form-error">{error}</p>}
 
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Nama Tenant</th>
-            <th>Status</th>
-            <th>Dibuat</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tenants.length === 0 && (
+      <div className="table-scroll">
+        <table className="admin-table">
+          <thead>
             <tr>
-              <td colSpan={4} className="email-list-empty">
-                Belum ada tenant.
-              </td>
+              <th>Nama Tenant</th>
+              <th>Status</th>
+              <th>Dibuat</th>
+              <th>Aksi</th>
             </tr>
-          )}
-          {tenants.map((tenant) => (
-            <tr key={tenant.id}>
-              <td>{tenant.tenantName}</td>
-              <td>
-                <span className={`badge badge-${tenant.billingStatus === 'active' ? 'success' : 'pending'}`}>
-                  {STATUS_LABEL[tenant.billingStatus]}
-                </span>
-              </td>
-              <td>{new Date(tenant.createdAt).toLocaleDateString('id-ID')}</td>
-              <td className="task-card-actions">
-                <Link className="btn-ghost" to={`/admin/domains?tenantId=${tenant.id}`}>
-                  Kelola Domain
-                </Link>
-                <button className="btn-ghost" onClick={() => handleToggle(tenant)}>
-                  {tenant.billingStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
-                </button>
-                <button className="btn-danger" onClick={() => handleDelete(tenant.id)}>
-                  Hapus
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tenants.length === 0 && (
+              <tr>
+                <td colSpan={4} className="email-list-empty">
+                  Belum ada tenant.
+                </td>
+              </tr>
+            )}
+            {tenants.map((tenant) => (
+              <tr key={tenant.id}>
+                <td>{tenant.tenantName}</td>
+                <td>
+                  <span className={`badge badge-${tenant.billingStatus === 'active' ? 'success' : 'pending'}`}>
+                    {STATUS_LABEL[tenant.billingStatus]}
+                  </span>
+                </td>
+                <td>{new Date(tenant.createdAt).toLocaleDateString('id-ID')}</td>
+                <td className="task-card-actions">
+                  <Link className="btn-ghost" to={`/admin/domains?tenantId=${tenant.id}`}>
+                    Kelola Domain
+                  </Link>
+                  <button className="btn-ghost" onClick={() => handleToggle(tenant)}>
+                    {tenant.billingStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
+                  </button>
+                  <button className="btn-danger" onClick={() => handleDelete(tenant.id)}>
+                    Hapus
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
