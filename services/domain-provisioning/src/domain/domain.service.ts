@@ -100,7 +100,21 @@ export class DomainService {
       );
     }
 
-    return domain;
+    return this.toPublicDomain(domain);
+  }
+
+  // dkimPrivateKey TIDAK PERNAH dikembalikan lewat API — hanya dipakai internal untuk hand-off
+  // ke mail-engine (lihat create() di atas). Sebelumnya endpoint ini (dan findAllByTenant,
+  // findOneOrThrow, remove) mengembalikan row Prisma mentah termasuk private key, artinya
+  // setiap kali admin buka halaman Manajemen Domain, private key DKIM semua domain tenant itu
+  // ikut terkirim ke browser lewat GET /domains — dipakai bahkan tidak, private key-nya
+  // menganggur di response JSON. Pola ini sama seperti ApiCredentialService.toPublic() di
+  // auth-service (secret cuma tampil sekali saat create, setelahnya cuma hash yang disimpan) —
+  // bedanya di sini secret TIDAK PERNAH perlu ditampilkan sama sekali ke client, bahkan sekali,
+  // karena DKIM private key murni dipakai server-to-server (hand-off ke mail-engine).
+  private toPublicDomain<T extends { dkimPrivateKey: string | null }>(domain: T): Omit<T, 'dkimPrivateKey'> {
+    const { dkimPrivateKey: _dkimPrivateKey, ...publicDomain } = domain;
+    return publicDomain;
   }
 
   // Format: "domain1:selector1,domain2:selector2" — domain operator platform yang DKIM-nya
@@ -121,19 +135,23 @@ export class DomainService {
       .filter((d) => d.domainName);
   }
 
-  findAllByTenant(tenantId: string) {
-    return this.prisma.domain.findMany({
+  async findAllByTenant(tenantId: string) {
+    const domains = await this.prisma.domain.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
     });
+    return domains.map((d) => this.toPublicDomain(d));
   }
 
+  // Dipakai internal oleh method lain di bawah (getVerificationInstructions, verify, getStatus,
+  // getDnsRecords, remove) — tidak satu pun butuh dkimPrivateKey, jadi aman di-strip di sini
+  // supaya seluruh pemanggil otomatis ikut aman, termasuk GET /domains/:id di controller.
   async findOneOrThrow(id: string) {
     const domain = await this.prisma.domain.findUnique({ where: { id } });
     if (!domain) {
       throw new NotFoundException(`Domain ${id} tidak ditemukan`);
     }
-    return domain;
+    return this.toPublicDomain(domain);
   }
 
   // Kartu instruksi TXT record yang harus dipasang user sebelum verifikasi (bagian dari FR-02/FR-03 UI flow)
@@ -158,13 +176,14 @@ export class DomainService {
       domain.verificationToken,
     );
 
-    return this.prisma.domain.update({
+    const updated = await this.prisma.domain.update({
       where: { id },
       data: {
         verificationStatus: isVerified ? 'verified' : 'failed',
         verifiedAt: isVerified ? new Date() : null,
       },
     });
+    return this.toPublicDomain(updated);
   }
 
   // FR-04: status verifikasi domain, dipoll dari frontend
@@ -191,6 +210,7 @@ export class DomainService {
 
   async remove(id: string) {
     await this.findOneOrThrow(id);
-    return this.prisma.domain.delete({ where: { id } });
+    const deleted = await this.prisma.domain.delete({ where: { id } });
+    return this.toPublicDomain(deleted);
   }
 }

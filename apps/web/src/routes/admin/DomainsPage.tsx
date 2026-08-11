@@ -4,10 +4,12 @@ import { api, ApiError } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
 import type { Domain, DnsRecords, Tenant } from '../../lib/types';
 
+// "verified" cuma soal bukti kepemilikan domain (record TXT #1) -- BUKAN indikator email
+// sudah siap kirim (butuh MX/SPF/DKIM terpasang juga, lihat peringatan di domain-detail).
 const STATUS_LABEL: Record<Domain['verificationStatus'], string> = {
   pending: 'Menunggu Verifikasi',
-  verified: 'Terverifikasi',
-  failed: 'Gagal',
+  verified: 'Kepemilikan Terverifikasi',
+  failed: 'Verifikasi Gagal',
 };
 
 export default function DomainsPage() {
@@ -219,9 +221,25 @@ export default function DomainsPage() {
 
             {expandedId === domain.id && (
               <div className="domain-detail">
+                <div
+                  className="form-error"
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}
+                >
+                  <span>⚠️</span>
+                  <span>
+                    <strong>Tombol "Cek Verifikasi" cuma mengecek record #1</strong> (bukti
+                    kepemilikan domain). Badge <strong>"Terverifikasi"</strong> TIDAK berarti
+                    email sudah bisa terkirim — record #2, #3, #4 di bawah (MX, SPF, DKIM) juga{' '}
+                    <strong>wajib</strong> dipasang di DNS provider domain ini, atau pengiriman
+                    email akan ditolak penerima (mis. Gmail) walau status sudah "Terverifikasi".
+                  </span>
+                </div>
+
                 {txtInstruction && (
                   <div className="dns-record-card">
-                    <div className="dns-record-label">1. Pasang TXT record ini untuk verifikasi kepemilikan:</div>
+                    <div className="dns-record-label">
+                      1. TXT Record — Bukti Kepemilikan Domain (dicek tombol "Cek Verifikasi")
+                    </div>
                     <code>
                       {txtInstruction.host} TXT "{txtInstruction.value}"
                     </code>
@@ -231,26 +249,26 @@ export default function DomainsPage() {
                   <>
                     {dnsRecords.mx && (
                       <div className="dns-record-card">
-                        <div className="dns-record-label">MX Record</div>
+                        <div className="dns-record-label">2. MX Record — wajib, supaya domain ini bisa menerima email</div>
                         <code>{dnsRecords.mx}</code>
                       </div>
                     )}
                     {dnsRecords.spf && (
                       <div className="dns-record-card">
-                        <div className="dns-record-label">SPF Record (TXT)</div>
+                        <div className="dns-record-label">3. SPF Record (TXT) — wajib, supaya email terkirim tidak ditolak/masuk spam</div>
                         <code>{dnsRecords.spf}</code>
-                      </div>
-                    )}
-                    {dnsRecords.dmarc && (
-                      <div className="dns-record-card">
-                        <div className="dns-record-label">DMARC Record (TXT)</div>
-                        <code>{dnsRecords.dmarc}</code>
                       </div>
                     )}
                     {dnsRecords.dkim && (
                       <div className="dns-record-card">
-                        <div className="dns-record-label">DKIM Record (TXT) — {dnsRecords.dkim.host}</div>
+                        <div className="dns-record-label">4. DKIM Record (TXT) — wajib, supaya email terkirim tidak ditolak/masuk spam — host: {dnsRecords.dkim.host}</div>
                         <code>{dnsRecords.dkim.value}</code>
+                      </div>
+                    )}
+                    {dnsRecords.dmarc && (
+                      <div className="dns-record-card">
+                        <div className="dns-record-label">5. DMARC Record (TXT) — disarankan, tidak wajib</div>
+                        <code>{dnsRecords.dmarc}</code>
                       </div>
                     )}
                   </>

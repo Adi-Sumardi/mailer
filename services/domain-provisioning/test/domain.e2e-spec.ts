@@ -8,9 +8,26 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { signTestToken } from './jwt.helper';
 
-jest.mock('dns', () => ({
-  promises: { resolveTxt: jest.fn() },
-}));
+// verifyDomainTxtRecord() (dns-record.util.ts) pakai `new Resolver()` + resolveTxt bergaya
+// callback (bukan dns.promises.resolveTxt) supaya bisa set resolver eksplisit (8.8.8.8/1.1.1.1).
+// Mock Resolver di sini forward ke mock promises.resolveTxt yang sama supaya kontrol test
+// yang sudah ada (dns.resolveTxt.mockResolvedValue/...mockRejectedValueOnce dst di bawah)
+// tetap berlaku, tanpa ubah cara test mengontrol hasil DNS.
+jest.mock('dns', () => {
+  const resolveTxt = jest.fn();
+  return {
+    promises: { resolveTxt },
+    Resolver: jest.fn().mockImplementation(() => ({
+      setServers: jest.fn(),
+      resolveTxt: (domain: string, cb: (err: Error | null, addresses?: string[][]) => void) => {
+        resolveTxt(domain).then(
+          (addresses: string[][]) => cb(null, addresses),
+          (err: Error) => cb(err),
+        );
+      },
+    })),
+  };
+});
 
 describe('Domain (e2e) — FR-02 s/d FR-05', () => {
   let app: INestApplication;
@@ -78,6 +95,42 @@ describe('Domain (e2e) — FR-02 s/d FR-05', () => {
 
     const signingConfPath = join(process.env.DKIM_OVERRIDE_DIR as string, 'dkim_signing.conf');
     expect(existsSync(signingConfPath)).toBe(true);
+  });
+
+  it('dkimPrivateKey TIDAK PERNAH muncul di response API (create, list, get, verify, delete)', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/domains')
+      .set('Authorization', `Bearer ${tenantAAdminToken}`)
+      .send({ tenantId: tenantAId, domainName: 'secret-key.test' })
+      .expect(201);
+    expect(created.body.dkimPrivateKey).toBeUndefined();
+
+    const list = await request(app.getHttpServer())
+      .get(`/domains?tenantId=${tenantAId}`)
+      .set('Authorization', `Bearer ${tenantAAdminToken}`)
+      .expect(200);
+    expect(list.body.every((d: Record<string, unknown>) => d.dkimPrivateKey === undefined)).toBe(true);
+
+    const one = await request(app.getHttpServer())
+      .get(`/domains/${created.body.id}`)
+      .set('Authorization', `Bearer ${tenantAAdminToken}`)
+      .expect(200);
+    expect(one.body.dkimPrivateKey).toBeUndefined();
+
+    (dns.resolveTxt as jest.Mock).mockResolvedValue([
+      [`sendagomail-verify=${created.body.verificationToken}`],
+    ]);
+    const verified = await request(app.getHttpServer())
+      .post(`/domains/${created.body.id}/verify`)
+      .set('Authorization', `Bearer ${tenantAAdminToken}`)
+      .expect(201);
+    expect(verified.body.dkimPrivateKey).toBeUndefined();
+
+    const removed = await request(app.getHttpServer())
+      .delete(`/domains/${created.body.id}`)
+      .set('Authorization', `Bearer ${tenantAAdminToken}`)
+      .expect(200);
+    expect(removed.body.dkimPrivateKey).toBeUndefined();
   });
 
   it('menolak Tenant Admin menambahkan domain untuk tenant lain (403)', async () => {
