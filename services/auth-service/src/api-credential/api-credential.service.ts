@@ -107,11 +107,15 @@ export class ApiCredentialService {
       };
     }
 
+    const startOfUtcDay = new Date();
+    startOfUtcDay.setUTCHours(0, 0, 0, 0);
+
     const updated = await this.prisma.apiCredential.update({
       where: { id: credential.id },
       data: {
         emailsSentToday: emailsSentToday + 1,
-        quotaResetAt: resetNeeded ? new Date() : credential.quotaResetAt,
+        // Simpan awal hari UTC (bukan `now`) agar data audit kuota konsisten dan terbaca.
+        quotaResetAt: resetNeeded ? startOfUtcDay : credential.quotaResetAt,
       },
     });
 

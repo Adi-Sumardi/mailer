@@ -42,6 +42,8 @@ function escapeHtml(value: string): string {
 export class EmailService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EmailService.name);
   private timer: NodeJS.Timeout | null = null;
+  // Lock mencegah dispatchDueEmails() dieksekusi ganda secara bersamaan (duplicate send).
+  private isDispatching = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -324,97 +326,125 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // Dipanggil oleh scheduler untuk menyerahkan email eksternal ke SendagoMail Engine.
-  // PENTING: status HANYA ditandai 'sent' kalau pengiriman SMTP benar-benar sukses —
-  // sebelumnya seluruh batch ditandai 'sent' tanpa syarat di akhir, jadi email yang gagal
-  // terkirim tetap terlihat "sent" di UI (bug nyata: user tidak pernah tahu emailnya gagal).
-  async dispatchDueEmails() {
-    const due = await this.prisma.email.findMany({
-      where: { sendStatus: 'queued', recallDeadlineAt: { lte: new Date() } },
-    });
-
-    if (due.length === 0) {
-      return { dispatched: 0, failed: 0 };
-    }
-
+  // Logika inti pengiriman satu email eksternal — dipakai bersama oleh dispatchDueEmails()
+  // dan forceDispatch() agar tidak ada duplikasi kode.
+  private async dispatchSingleEmail(email: {
+    id: string;
+    mailboxId: string;
+    fromAddr: string;
+    toAddr: string;
+    subject: string;
+    body: string;
+    isHtml: boolean;
+  }): Promise<boolean> {
     const transporter = this.getTransporter();
-    let dispatched = 0;
-    let failed = 0;
-
-    for (const email of due) {
-      this.logger.log(`SendagoMail Engine Dispatcher: Processing email ${email.id} -> ${email.toAddr}`);
-
-      let success = false;
-      if (transporter) {
-        try {
-          const template = await this.emailTemplateService.getForRender(email.mailboxId);
-          const attachments = await this.prisma.attachment.findMany({
-            where: { emailId: email.id },
-          });
-
-          const attachmentList = attachments.map((att) => {
-            if (fs.existsSync(att.storagePath)) {
-              return { filename: att.filename, path: att.storagePath };
-            }
-            return {
-              filename: att.filename,
-              content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
-            };
-          });
-          const logoAttachment = this.getLogoAttachment(template);
-          if (logoAttachment) attachmentList.push(logoAttachment);
-
-          await transporter.sendMail({
-            from: email.fromAddr,
-            to: email.toAddr,
-            subject: email.subject,
-            text: email.body,
-            html: this.buildBrandedHtml(email.body, email.isHtml, template),
-            attachments: attachmentList,
-          });
-          this.logger.log(`Email ${email.id} successfully sent via SMTP Transport to ${email.toAddr}`);
-          success = true;
-        } catch (err) {
-          this.logger.error(`Failed to send email ${email.id} via SMTP Transport: ${(err as Error).message}`);
-        }
-      } else {
-        // Direct MX Resolution & Outbound Delivery
-        success = await this.sendDirectMx(email);
-      }
-
-      if (success) {
-        await this.prisma.email.update({
-          where: { id: email.id },
-          data: { sendStatus: 'sent', sentAt: new Date() },
+    if (transporter) {
+      try {
+        const template = await this.emailTemplateService.getForRender(email.mailboxId);
+        const attachments = await this.prisma.attachment.findMany({
+          where: { emailId: email.id },
         });
-        dispatched += 1;
-      } else {
-        await this.prisma.email.update({
-          where: { id: email.id },
-          data: { sendStatus: 'failed' },
+
+        const attachmentList = attachments.map((att) => {
+          if (fs.existsSync(att.storagePath)) {
+            return { filename: att.filename, path: att.storagePath };
+          }
+          return {
+            filename: att.filename,
+            content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
+          };
         });
-        failed += 1;
+        const logoAttachment = this.getLogoAttachment(template);
+        if (logoAttachment) attachmentList.push(logoAttachment);
+
+        await transporter.sendMail({
+          from: email.fromAddr,
+          to: email.toAddr,
+          subject: email.subject,
+          text: email.body,
+          html: this.buildBrandedHtml(email.body, email.isHtml, template),
+          attachments: attachmentList,
+        });
+        this.logger.log(`Email ${email.id} successfully sent via SMTP Transport to ${email.toAddr}`);
+        return true;
+      } catch (err) {
+        this.logger.error(`Failed to send email ${email.id} via SMTP Transport: ${(err as Error).message}`);
+        return false;
       }
+    } else {
+      // Direct MX Resolution & Outbound Delivery
+      return this.sendDirectMx(email);
     }
-
-    return { dispatched, failed };
   }
 
-  private async autoDispatchDue(mailboxId: string) {
-    if (!mailboxId) return;
-    await this.prisma.email.updateMany({
-      where: {
-        mailboxId,
-        sendStatus: 'queued',
-        recallDeadlineAt: { lte: new Date() },
-      },
-      data: { sendStatus: 'sent', sentAt: new Date() },
+  // Dipanggil oleh scheduler untuk menyerahkan email eksternal ke SendagoMail Engine.
+  // PENTING: status HANYA ditandai 'sent' kalau pengiriman SMTP benar-benar sukses.
+  // Lock isDispatching mencegah eksekusi ganda yang bisa menyebabkan duplicate send.
+  async dispatchDueEmails() {
+    if (this.isDispatching) {
+      return { dispatched: 0, failed: 0 };
+    }
+    this.isDispatching = true;
+    try {
+      const due = await this.prisma.email.findMany({
+        where: { sendStatus: 'queued', recallDeadlineAt: { lte: new Date() } },
+      });
+
+      if (due.length === 0) {
+        return { dispatched: 0, failed: 0 };
+      }
+
+      let dispatched = 0;
+      let failed = 0;
+
+      for (const email of due) {
+        this.logger.log(`SendagoMail Engine Dispatcher: Processing email ${email.id} -> ${email.toAddr}`);
+        const success = await this.dispatchSingleEmail(email);
+
+        if (success) {
+          await this.prisma.email.update({
+            where: { id: email.id },
+            data: { sendStatus: 'sent', sentAt: new Date() },
+          });
+          dispatched += 1;
+        } else {
+          await this.prisma.email.update({
+            where: { id: email.id },
+            data: { sendStatus: 'failed' },
+          });
+          failed += 1;
+        }
+      }
+
+      return { dispatched, failed };
+    } finally {
+      this.isDispatching = false;
+    }
+  }
+
+  // Kirim langsung satu email tertentu tanpa menunggu scheduler — dipakai oleh endpoint
+  // POST /emails/api-send agar email transaksional dari aplikasi pihak ketiga terkirim
+  // seketika tanpa bergantung pada recall window atau siklus 5 detik scheduler.
+  async forceDispatch(emailId: string): Promise<void> {
+    const email = await this.prisma.email.findUnique({ where: { id: emailId } });
+    if (!email || email.sendStatus !== 'queued') return;
+
+    this.logger.log(`SendagoMail Engine ForceDispatch: Sending email ${email.id} -> ${email.toAddr}`);
+    const success = await this.dispatchSingleEmail(email);
+
+    await this.prisma.email.update({
+      where: { id: email.id },
+      data: success
+        ? { sendStatus: 'sent', sentAt: new Date() }
+        : { sendStatus: 'failed' },
     });
   }
 
   async findAllInFolder(mailboxId: string, folderId: string) {
     if (!mailboxId) return [];
-    await this.autoDispatchDue(mailboxId);
+    // autoDispatchDue() dihapus — hanya menandai 'sent' tanpa benar-benar mengirim email
+    // (bug: status palsu, scheduler tidak menemukan email untuk dikirim).
+    // Pengiriman nyata ditangani eksklusif oleh scheduler dispatchDueEmails().
     return this.prisma.email.findMany({
       where: { mailboxId, folderId },
       orderBy: { createdAt: 'desc' },
@@ -424,7 +454,6 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
   // FR-08
   async search(mailboxId: string, filters: SearchEmailDto) {
     if (!mailboxId) return [];
-    await this.autoDispatchDue(mailboxId);
     return this.prisma.email.findMany({
       where: {
         mailboxId,

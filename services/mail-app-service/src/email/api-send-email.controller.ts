@@ -28,6 +28,10 @@ export class ApiSendEmailController {
       isHtml: dto.isHtml,
     });
 
+    // Email transaksional dari aplikasi pihak ketiga dikirim seketika — tidak perlu
+    // menunggu scheduler 5 detik atau recall window (recall tidak relevan untuk API-send).
+    await this.emailService.forceDispatch(email.id);
+
     return { ...email, environment: result.environment, remainingQuota: result.remainingQuota };
   }
 }
