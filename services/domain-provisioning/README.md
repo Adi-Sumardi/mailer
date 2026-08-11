@@ -59,7 +59,7 @@ Token diverifikasi pakai `JWT_SECRET` yang **harus sama persis** dengan `JWT_SEC
 | GET | `/internal/tenants/:id/exists` | Dipakai `auth-service` untuk validasi silang `tenantId` saat registrasi (BR-08) |
 
 ## Catatan Implementasi
-- DKIM keypair (RSA 2048-bit) digenerate otomatis saat domain dibuat. Private key ditulis ke `DKIM_KEYS_DIR/<domain>/<selector>.private` mengikuti layout OpenDKIM yang dipakai docker-mailserver (lihat `.gitignore` root: `**/config/opendkim/keys/`) — **asumsi path ini perlu diverifikasi ulang** begitu `mail-engine` benar-benar disetup, karena docker-mailserver bisa memakai lokasi berbeda tergantung versi & konfigurasi Rspamd/OpenDKIM yang dipakai. Kegagalan menulis file tidak menggagalkan pembuatan domain (di-log sebagai warning saja).
+- DKIM keypair (RSA 2048-bit) digenerate otomatis saat domain dibuat. Private key ditulis ke `DKIM_KEYS_DIR/rsa-2048-<selector>-<domain>.private.txt`, dan `DKIM_OVERRIDE_DIR/dkim_signing.conf` di-regenerate PENUH (bukan patch teks) dari seluruh domain yang punya DKIM key di DB — dua-duanya mengikuti layout modul Rspamd `dkim_signing` di docker-mailserver (lihat `dkim-handoff.util.ts`), BUKAN OpenDKIM klasik lagi. Alasan pindah: docker-mailserver punya changedetector bawaan yang live-reload proses Rspamd begitu file di `/tmp/docker-mailserver/rspamd/**` berubah, sedangkan OpenDKIM klasik cuma baca config-nya sekali saat container start — domain baru butuh restart penuh `mail-engine` supaya DKIM aktif, yang pernah bikin tenant baru gagal kirim email diam-diam sampai ada yang sadar & restart manual. Kegagalan menulis file tidak menggagalkan pembuatan domain (di-log sebagai warning saja).
 - Verifikasi TXT record memakai `dns.resolveTxt` bawaan Node — murni cek DNS publik, tidak butuh integrasi provider tertentu (Cloudflare API dsb. baru diperlukan kalau mau auto-provisioning DNS, bukan sekadar verifikasi).
 - Guard JWT/RBAC (`JwtAuthGuard`, `RolesGuard`, `TenantScopeGuard` di `src/auth/`) sudah terpasang di semua endpoint. `services/auth-service` sekarang benar-benar menerbitkan token yang cocok dengan kontrak ini (`{sub, role, tenantId}` — subset dari payload yang diterbitkan di sana) — tinggal pastikan `JWT_SECRET` di kedua service sama.
 - `GET /internal/tenants/:id/exists` sengaja dipisah dari `TenantController` (bukan `RolesGuard` super_admin) karena pemanggilnya (`auth-service`) bukan user login — diproteksi `InternalApiKeyGuard` (`X-Internal-Api-Key`), harus sama persis dengan `INTERNAL_API_KEY` di `auth-service`.
@@ -90,9 +90,8 @@ DATABASE_URL="postgresql://sendagomail:sendagomail@localhost:55432/sendagomail_d
 - [x] Implementasi endpoint FR-01 s/d FR-05
 - [x] Unit test untuk util generator DNS record
 - [x] Guard otorisasi JWT/RBAC (Super Admin / Tenant Admin, tenant-scoped)
-- [x] Hand-off DKIM private key ke direktori mail-engine (filesystem-level; path masih perlu diverifikasi ulang terhadap setup mail-engine sungguhan)
+- [x] Hand-off DKIM private key ke direktori mail-engine (filesystem-level, jalur Rspamd `dkim_signing` — live-reload otomatis, sudah diverifikasi end-to-end di production termasuk kirim email sungguhan lewat Gmail)
 - [x] Test integrasi end-to-end dengan database PostgreSQL nyata (18 test, lihat `test/`)
 - [x] Endpoint internal untuk validasi silang tenantId dari `auth-service` (`GET /internal/tenants/:id/exists`, diproteksi internal API key)
 - [ ] Integrasi dengan API Gateway
 - [ ] Ganti verifikasi JWT_SECRET manual dengan mekanisme resmi (JWKS/public key) — `auth-service` sudah ada, ini tinggal upgrade transportnya
-- [ ] Verifikasi ulang path & mekanisme reload DKIM key terhadap konfigurasi mail-engine yang sesungguhnya (Rspamd vs OpenDKIM)

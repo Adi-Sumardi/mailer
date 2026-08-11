@@ -10,7 +10,7 @@ import {
   generateDkimKeyPair,
   verifyDomainTxtRecord,
 } from './dns-record.util';
-import { writeDkimKeyToMailEngine } from './dkim-handoff.util';
+import { regenerateDkimSigningConfig, writeDkimKeyFile } from './dkim-handoff.util';
 
 @Injectable()
 export class DomainService {
@@ -56,16 +56,34 @@ export class DomainService {
       },
     });
 
-    // Hand-off private key ke direktori mail-engine. Kegagalan filesystem (mis. dev tanpa
-    // mail-engine ter-clone di sebelahnya) tidak boleh menggagalkan pembuatan domain di DB —
-    // hand-off bisa diulang manual lewat operasi terpisah nanti.
+    // Hand-off private key + config signing ke direktori mail-engine (dibaca Rspamd, live-reload
+    // otomatis lewat changedetector bawaan docker-mailserver — lihat dkim-handoff.util.ts).
+    // Kegagalan filesystem (mis. dev tanpa mail-engine ter-clone di sebelahnya) tidak boleh
+    // menggagalkan pembuatan domain di DB — hand-off bisa diulang manual lewat operasi terpisah nanti.
     try {
-      await writeDkimKeyToMailEngine({
-        keysDir: this.config.get<string>('DKIM_KEYS_DIR', '../../mail-engine/config/opendkim/keys'),
+      const dkimDir = this.config.get<string>('DKIM_KEYS_DIR', '../../mail-engine/config/rspamd/dkim');
+      const overrideDir = this.config.get<string>(
+        'DKIM_OVERRIDE_DIR',
+        '../../mail-engine/config/rspamd/override.d',
+      );
+      await writeDkimKeyFile({
+        dkimDir,
         domainName: dto.domainName,
         selector: dkim.selector,
         privateKeyPem: dkim.privateKeyPem,
-        publicKeyRecord: dkim.publicKeyRecord,
+      });
+
+      // Regenerate config signing dari SEMUA domain yang sudah punya DKIM key (bukan cuma yang
+      // baru dibuat) — supaya file override tetap konsisten kalau sebelumnya sempat gagal ditulis.
+      const allDomains = await this.prisma.domain.findMany({
+        where: { dkimPrivateKey: { not: null } },
+        select: { domainName: true, dkimSelector: true },
+      });
+      await regenerateDkimSigningConfig({
+        overrideDir,
+        domains: allDomains
+          .filter((d): d is { domainName: string; dkimSelector: string } => d.dkimSelector !== null)
+          .map((d) => ({ domainName: d.domainName, selector: d.dkimSelector })),
       });
     } catch (err) {
       this.logger.warn(

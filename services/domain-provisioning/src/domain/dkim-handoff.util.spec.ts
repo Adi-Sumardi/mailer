@@ -1,76 +1,80 @@
 import { mkdtemp, readFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { writeDkimKeyToMailEngine } from './dkim-handoff.util';
+import { regenerateDkimSigningConfig, writeDkimKeyFile } from './dkim-handoff.util';
 
 describe('dkim-handoff.util', () => {
   let root: string;
-  let keysDir: string;
+  let dkimDir: string;
+  let overrideDir: string;
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'dkim-handoff-test-'));
-    keysDir = join(root, 'opendkim', 'keys');
+    dkimDir = join(root, 'rspamd', 'dkim');
+    overrideDir = join(root, 'rspamd', 'override.d');
   });
 
   afterEach(async () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  it('menulis private/public key ke keys/<domain>/<selector> dan mendaftarkan ke KeyTable+SigningTable', async () => {
-    await writeDkimKeyToMailEngine({
-      keysDir,
+  it('menulis private key ke dkimDir dengan nama file rsa-2048-<selector>-<domain>.private.txt', async () => {
+    await writeDkimKeyFile({
+      dkimDir,
       domainName: 'simonas.id',
       selector: 'sendago',
       privateKeyPem: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n',
-      publicKeyRecord: 'v=DKIM1; k=rsa; p=abc',
     });
 
-    const privateKey = await readFile(join(keysDir, 'simonas.id', 'sendago.private'), 'utf8');
+    const privateKey = await readFile(join(dkimDir, 'rsa-2048-sendago-simonas.id.private.txt'), 'utf8');
     expect(privateKey).toContain('BEGIN PRIVATE KEY');
+  });
 
-    const keyTable = await readFile(join(root, 'opendkim', 'KeyTable'), 'utf8');
-    expect(keyTable).toContain(
-      'sendago._domainkey.simonas.id simonas.id:sendago:/etc/opendkim/keys/simonas.id/sendago.private',
+  it('regenerateDkimSigningConfig menulis domain block per domain dengan path container yang benar', async () => {
+    await regenerateDkimSigningConfig({
+      overrideDir,
+      domains: [
+        { domainName: 'simonas.id', selector: 'sendago' },
+        { domainName: 'yapinet.id', selector: 'sendago' },
+      ],
+    });
+
+    const conf = await readFile(join(overrideDir, 'dkim_signing.conf'), 'utf8');
+    expect(conf).toContain('enabled = true;');
+    expect(conf).toContain('simonas.id {');
+    expect(conf).toContain(
+      'path = "/tmp/docker-mailserver/rspamd/dkim/rsa-2048-sendago-simonas.id.private.txt";',
     );
-
-    const signingTable = await readFile(join(root, 'opendkim', 'SigningTable'), 'utf8');
-    expect(signingTable).toContain('*@simonas.id sendago._domainkey.simonas.id');
+    expect(conf).toContain('yapinet.id {');
+    expect(conf).toContain(
+      'path = "/tmp/docker-mailserver/rspamd/dkim/rsa-2048-sendago-yapinet.id.private.txt";',
+    );
   });
 
-  it('idempotent — menjalankan ulang untuk domain yang sama tidak menduplikasi baris', async () => {
-    const params = {
-      keysDir,
-      domainName: 'simonas.id',
-      selector: 'sendago',
-      privateKeyPem: 'key-1',
-      publicKeyRecord: 'v=DKIM1; k=rsa; p=abc',
-    };
-    await writeDkimKeyToMailEngine(params);
-    await writeDkimKeyToMailEngine(params);
-
-    const keyTable = await readFile(join(root, 'opendkim', 'KeyTable'), 'utf8');
-    const matches = keyTable.split('\n').filter((l) => l.includes('simonas.id'));
-    expect(matches).toHaveLength(1);
+  it('regenerateDkimSigningConfig idempotent — dipanggil ulang dengan daftar sama menghasilkan isi identik', async () => {
+    const domains = [{ domainName: 'simonas.id', selector: 'sendago' }];
+    await regenerateDkimSigningConfig({ overrideDir, domains });
+    const first = await readFile(join(overrideDir, 'dkim_signing.conf'), 'utf8');
+    await regenerateDkimSigningConfig({ overrideDir, domains });
+    const second = await readFile(join(overrideDir, 'dkim_signing.conf'), 'utf8');
+    expect(second).toBe(first);
   });
 
-  it('menambahkan domain kedua tanpa menghapus entri domain pertama', async () => {
-    await writeDkimKeyToMailEngine({
-      keysDir,
-      domainName: 'simonas.id',
-      selector: 'sendago',
-      privateKeyPem: 'key-1',
-      publicKeyRecord: 'v=DKIM1; k=rsa; p=abc',
+  it('regenerateDkimSigningConfig menghapus domain yang sudah tidak ada di daftar (full regenerate, bukan patch)', async () => {
+    await regenerateDkimSigningConfig({
+      overrideDir,
+      domains: [
+        { domainName: 'simonas.id', selector: 'sendago' },
+        { domainName: 'lama.id', selector: 'sendago' },
+      ],
     });
-    await writeDkimKeyToMailEngine({
-      keysDir,
-      domainName: 'lain.id',
-      selector: 'sendago',
-      privateKeyPem: 'key-2',
-      publicKeyRecord: 'v=DKIM1; k=rsa; p=def',
+    await regenerateDkimSigningConfig({
+      overrideDir,
+      domains: [{ domainName: 'simonas.id', selector: 'sendago' }],
     });
 
-    const keyTable = await readFile(join(root, 'opendkim', 'KeyTable'), 'utf8');
-    expect(keyTable).toContain('simonas.id');
-    expect(keyTable).toContain('lain.id');
+    const conf = await readFile(join(overrideDir, 'dkim_signing.conf'), 'utf8');
+    expect(conf).toContain('simonas.id {');
+    expect(conf).not.toContain('lama.id');
   });
 });

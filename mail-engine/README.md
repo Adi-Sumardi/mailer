@@ -12,14 +12,16 @@ docker compose up -d
 
 # generate akun email pertama (contoh)
 docker exec -it sendagomail-mailserver setup email add admin@domainanda.com
-
-# generate DKIM key
-docker exec -it sendagomail-mailserver setup config dkim
-
-# lihat DNS record yang perlu ditambahkan (SPF/DKIM/DMARC)
-docker exec -it sendagomail-mailserver setup config dkim keysize 2048
-cat config/opendkim/keys/domainanda.com/mail.txt
 ```
+
+> **DKIM untuk domain tenant** (bukan domain admin/base di atas) di-generate & di-handoff otomatis
+> oleh `services/domain-provisioning` saat tenant menambahkan domain lewat aplikasi — lewat modul
+> Rspamd `dkim_signing` (`config/rspamd/dkim/` + `config/rspamd/override.d/dkim_signing.conf`),
+> **bukan** `setup config dkim` (yang men-generate OpenDKIM klasik, dipakai terpisah kalau memang
+> perlu key manual untuk domain admin/base). Rspamd punya live-reload otomatis lewat
+> changedetector bawaan docker-mailserver — domain baru langsung aktif tanpa restart container.
+> Kalau menambah domain admin manual via CLI di atas, tetap perlu `docker compose restart mailserver`
+> setelahnya kalau memakai jalur OpenDKIM klasik.
 
 ## Checklist Sebelum Production
 

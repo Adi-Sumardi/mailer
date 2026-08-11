@@ -11,7 +11,6 @@ process.env.INTERNAL_API_KEY = 'test-internal-key-do-not-use-in-production';
 process.env.MAIL_ENGINE_MX_HOST = 'mail.test.local';
 process.env.MAIL_ENGINE_MX_PRIORITY = '10';
 process.env.DOMAIN_VERIFICATION_TXT_PREFIX = 'sendagomail-verify';
-// Arahkan hand-off DKIM ke folder temp, bukan mail-engine/config/opendkim/keys sungguhan.
-// Nested "keys" di dalam .tmp-dkim-keys/ supaya KeyTable/SigningTable (ditulis satu level DI
-// ATAS keysDir oleh writeDkimKeyToMailEngine) juga masuk .tmp-dkim-keys/, bukan tercecer ke test/.
-process.env.DKIM_KEYS_DIR = join(__dirname, '.tmp-dkim-keys', 'keys');
+// Arahkan hand-off DKIM ke folder temp, bukan mail-engine/config/rspamd sungguhan.
+process.env.DKIM_KEYS_DIR = join(__dirname, '.tmp-dkim-keys', 'dkim');
+process.env.DKIM_OVERRIDE_DIR = join(__dirname, '.tmp-dkim-keys', 'override.d');

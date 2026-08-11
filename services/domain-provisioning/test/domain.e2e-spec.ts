@@ -34,6 +34,7 @@ describe('Domain (e2e) — FR-02 s/d FR-05', () => {
     await prisma.tenant.deleteMany();
     await app.close();
     rmSync(process.env.DKIM_KEYS_DIR as string, { recursive: true, force: true });
+    rmSync(process.env.DKIM_OVERRIDE_DIR as string, { recursive: true, force: true });
   });
 
   beforeEach(async () => {
@@ -71,10 +72,12 @@ describe('Domain (e2e) — FR-02 s/d FR-05', () => {
 
     const privateKeyPath = join(
       process.env.DKIM_KEYS_DIR as string,
-      'acme-a.test',
-      'sendago.private',
+      'rsa-2048-sendago-acme-a.test.private.txt',
     );
     expect(existsSync(privateKeyPath)).toBe(true);
+
+    const signingConfPath = join(process.env.DKIM_OVERRIDE_DIR as string, 'dkim_signing.conf');
+    expect(existsSync(signingConfPath)).toBe(true);
   });
 
   it('menolak Tenant Admin menambahkan domain untuk tenant lain (403)', async () => {

@@ -2,6 +2,7 @@
 .env
 *.env.local
 **/config/opendkim/keys/
+**/config/rspamd/dkim/
 services/domain-provisioning/test/.tmp-dkim-keys/
 services/mail-app-service/test/.tmp-template-logos/
 
