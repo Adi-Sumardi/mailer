@@ -40,6 +40,9 @@ services:
       # aktif, celah yang sempat bikin tenant baru gagal kirim tanpa ada yang sadar).
       DKIM_KEYS_DIR: /app/rspamd/dkim
       DKIM_OVERRIDE_DIR: /app/rspamd/override.d
+      # Domain operator platform (bukan tenant) yang DKIM-nya di-setup manual, bukan lewat
+      # aplikasi ini — lihat komentar DKIM_STATIC_DOMAINS di .env.example service ini.
+      DKIM_STATIC_DOMAINS: adilabs.id:mail
       DOMAIN_VERIFICATION_TXT_PREFIX: sendagomail-verify
       MAIL_ENGINE_MX_HOST: mail.adilabs.id
       MAIL_ENGINE_MX_PRIORITY: 10

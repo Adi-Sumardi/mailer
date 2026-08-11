@@ -75,15 +75,24 @@ export class DomainService {
 
       // Regenerate config signing dari SEMUA domain yang sudah punya DKIM key (bukan cuma yang
       // baru dibuat) — supaya file override tetap konsisten kalau sebelumnya sempat gagal ditulis.
+      // Digabung dengan DKIM_STATIC_DOMAINS (domain operator platform, mis. domain super_admin,
+      // yang key-nya digenerate manual lewat CLI docker-mailserver, bukan lewat aplikasi ini —
+      // jadi tidak pernah ada row-nya di tabel `domain`). Tanpa ini, domain statis itu akan
+      // KE-DROP diam-diam dari dkim_signing.conf setiap kali ada tenant domain lain ditambahkan,
+      // karena regenerate di bawah ini penuh (bukan patch) — persis kelas bug yang sedang
+      // diperbaiki di sini, jangan sampai terulang untuk domain operator sendiri.
       const allDomains = await this.prisma.domain.findMany({
         where: { dkimPrivateKey: { not: null } },
         select: { domainName: true, dkimSelector: true },
       });
       await regenerateDkimSigningConfig({
         overrideDir,
-        domains: allDomains
-          .filter((d): d is { domainName: string; dkimSelector: string } => d.dkimSelector !== null)
-          .map((d) => ({ domainName: d.domainName, selector: d.dkimSelector })),
+        domains: [
+          ...allDomains
+            .filter((d): d is { domainName: string; dkimSelector: string } => d.dkimSelector !== null)
+            .map((d) => ({ domainName: d.domainName, selector: d.dkimSelector })),
+          ...this.parseStaticDkimDomains(),
+        ],
       });
     } catch (err) {
       this.logger.warn(
@@ -92,6 +101,24 @@ export class DomainService {
     }
 
     return domain;
+  }
+
+  // Format: "domain1:selector1,domain2:selector2" — domain operator platform yang DKIM-nya
+  // digenerate manual di luar aplikasi ini (lihat komentar di create()). Key filenya sendiri
+  // harus sudah ada di DKIM_KEYS_DIR dengan nama rsa-2048-<selector>-<domain>.private.txt,
+  // service ini tidak menggenerate key untuk domain statis, cuma mendaftarkannya supaya tidak
+  // ke-drop dari dkim_signing.conf.
+  private parseStaticDkimDomains(): { domainName: string; selector: string }[] {
+    const raw = this.config.get<string>('DKIM_STATIC_DOMAINS', '');
+    return raw
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const [domainName, selector] = entry.split(':').map((s) => s.trim());
+        return { domainName, selector: selector ?? 'mail' };
+      })
+      .filter((d) => d.domainName);
   }
 
   findAllByTenant(tenantId: string) {
