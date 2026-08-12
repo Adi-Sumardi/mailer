@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
-import { api, ApiError } from '../lib/apiClient';
+import { api, apiDownloadFile, ApiError } from '../lib/apiClient';
 import type { EmailAttachment, EmailMessage, Folder } from '../lib/types';
 import ComposeModal from '../components/ComposeModal';
 import RecallBanner from '../components/RecallBanner';
@@ -350,9 +350,24 @@ export default function InboxPage() {
                   <strong>📎 Lampiran ({selectedAttachments.length}):</strong>
                   <div className="email-attachments-list">
                     {selectedAttachments.map((att) => (
-                      <div key={att.id} className="email-attachment-chip">
-                        📄 <strong>{att.filename}</strong> ({att.sizeKb} KB)
-                      </div>
+                      <button
+                        key={att.id}
+                        type="button"
+                        className="email-attachment-chip"
+                        title={`Unduh ${att.filename}`}
+                        onClick={() =>
+                          apiDownloadFile(
+                            `/emails/${selectedEmail.id}/attachments/${att.id}/download`,
+                            att.filename,
+                          ).catch((err) =>
+                            setError(
+                              err instanceof ApiError ? err.message : 'Gagal mengunduh lampiran.',
+                            ),
+                          )
+                        }
+                      >
+                        📄 <strong>{att.filename}</strong> ({att.sizeKb} KB) ⬇
+                      </button>
                     ))}
                   </div>
                 </div>

@@ -13,7 +13,7 @@ Sumber: `SRS_SendagoMail.docx` v1.0. Centang `[x]` kalau sudah selesai diimpleme
 - [x] FR-06 — Compose, reply, forward, delete email (`services/mail-app-service`)
 - [x] FR-07 — Organisasi folder (Inbox/Sent/Draft/Trash/Custom) (`services/mail-app-service`)
 - [x] FR-08 — Search email (pengirim, subjek, isi, tanggal) (`services/mail-app-service`)
-- [~] FR-09 — Upload/download attachment dengan batas ukuran (`services/mail-app-service` — baru metadata + validasi ukuran; upload fisik ke object storage/S3-MinIO belum diintegrasikan)
+- [x] FR-09 — Upload/download attachment dengan batas ukuran (`services/mail-app-service` — file fisik disimpan ke `ATTACHMENTS_DIR` (named volume), upload multipart dari webmail + base64 lewat `POST /emails/api-send` untuk integrasi aplikasi (mis. invoice PDF), download lewat `GET /emails/:id/attachments/:attachmentId/download`. Object storage S3/MinIO belum dipakai — tidak diperlukan untuk skala saat ini)
 - [x] FR-10 — Tandai dibaca/belum, penting, spam (`services/mail-app-service`)
 - [~] FR-11 — Thread/conversation view (`services/mail-app-service` — `threadId` sudah ada di skema & terisi otomatis lewat reply/forward, tapi belum ada endpoint khusus untuk fetch 1 thread sekaligus)
 - [x] FR-11a — Tarik kembali email (Recall/Unsend) (`services/mail-app-service`)

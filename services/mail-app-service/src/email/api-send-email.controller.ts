@@ -28,6 +28,12 @@ export class ApiSendEmailController {
       isHtml: dto.isHtml,
     });
 
+    // Lampiran (mis. invoice PDF) WAJIB tersimpan sebelum forceDispatch di bawah — kalau
+    // dibalik, email keburu terkirim tanpa lampiran sama sekali.
+    if (dto.attachments?.length) {
+      await this.emailService.addApiAttachments(email.id, dto.attachments);
+    }
+
     // Email transaksional dari aplikasi pihak ketiga dikirim seketika — tidak perlu
     // menunggu scheduler 5 detik atau recall window (recall tidak relevan untuk API-send).
     await this.emailService.forceDispatch(email.id);

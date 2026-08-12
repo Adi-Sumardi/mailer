@@ -7,6 +7,7 @@ interface IntegrationCodeSamplesProps {
 }
 
 type Lang = 'curl' | 'php' | 'python' | 'node' | 'java';
+type Recipe = 'otp' | 'invoice';
 
 const LANG_LABEL: Record<Lang, string> = {
   curl: 'cURL',
@@ -15,6 +16,146 @@ const LANG_LABEL: Record<Lang, string> = {
   node: 'Node.js',
   java: 'Java',
 };
+
+const RECIPE_LABEL: Record<Recipe, string> = {
+  otp: 'Kirim OTP (teks)',
+  invoice: 'Kirim Invoice (lampiran PDF)',
+};
+
+// Contoh kirim invoice: file PDF dibaca dari disk lalu di-encode base64 ke field attachments.
+function buildInvoiceSnippets(baseUrl: string, memberId: string, secret: string): Record<Lang, string> {
+  const url = `${baseUrl}/emails/api-send`;
+
+  return {
+    curl: `# base64 -w0 di Linux; di macOS pakai: base64 -i invoice.pdf
+PDF_B64=$(base64 -w0 invoice.pdf)
+
+curl -X POST ${url} \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "memberId": "${memberId}",
+    "secret": "${secret}",
+    "toAddr": "klien@perusahaan.com",
+    "subject": "Invoice #INV-2026-001",
+    "body": "Terlampir invoice Anda. Terima kasih.",
+    "attachments": [
+      { "filename": "invoice.pdf", "contentBase64": "'"$PDF_B64"'" }
+    ]
+  }'`,
+
+    php: `<?php
+$payload = [
+    'memberId' => '${memberId}',
+    'secret'   => '${secret}',
+    'toAddr'   => 'klien@perusahaan.com',
+    'subject'  => 'Invoice #INV-2026-001',
+    'body'     => 'Terlampir invoice Anda. Terima kasih.',
+    'attachments' => [
+        [
+            'filename'      => 'invoice.pdf',
+            'contentBase64' => base64_encode(file_get_contents('/path/ke/invoice.pdf')),
+        ],
+    ],
+];
+
+$ch = curl_init('${url}');
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+    CURLOPT_POSTFIELDS => json_encode($payload),
+]);
+
+$response = curl_exec($ch);
+$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+if ($statusCode !== 201) {
+    throw new Exception("Gagal kirim invoice: " . $response);
+}
+
+echo $response;`,
+
+    python: `import base64
+import requests
+
+with open("/path/ke/invoice.pdf", "rb") as f:
+    pdf_b64 = base64.b64encode(f.read()).decode()
+
+response = requests.post(
+    "${url}",
+    json={
+        "memberId": "${memberId}",
+        "secret": "${secret}",
+        "toAddr": "klien@perusahaan.com",
+        "subject": "Invoice #INV-2026-001",
+        "body": "Terlampir invoice Anda. Terima kasih.",
+        "attachments": [
+            {"filename": "invoice.pdf", "contentBase64": pdf_b64},
+        ],
+    },
+)
+
+if response.status_code != 201:
+    raise Exception(f"Gagal kirim invoice: {response.text}")
+
+print(response.json())`,
+
+    node: `import { readFile } from 'node:fs/promises';
+
+const pdfB64 = (await readFile('/path/ke/invoice.pdf')).toString('base64');
+
+const response = await fetch('${url}', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    memberId: '${memberId}',
+    secret: '${secret}',
+    toAddr: 'klien@perusahaan.com',
+    subject: 'Invoice #INV-2026-001',
+    body: 'Terlampir invoice Anda. Terima kasih.',
+    attachments: [
+      { filename: 'invoice.pdf', contentBase64: pdfB64 },
+    ],
+  }),
+});
+
+if (!response.ok) {
+  throw new Error(\`Gagal kirim invoice: \${await response.text()}\`);
+}
+
+console.log(await response.json());`,
+
+    java: `String pdfB64 = Base64.getEncoder().encodeToString(
+    Files.readAllBytes(Path.of("/path/ke/invoice.pdf")));
+
+String json = """
+    {
+      "memberId": "${memberId}",
+      "secret": "${secret}",
+      "toAddr": "klien@perusahaan.com",
+      "subject": "Invoice #INV-2026-001",
+      "body": "Terlampir invoice Anda. Terima kasih.",
+      "attachments": [
+        { "filename": "invoice.pdf", "contentBase64": "%s" }
+      ]
+    }
+    """.formatted(pdfB64);
+
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("${url}"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(json))
+    .build();
+
+HttpResponse<String> response = HttpClient.newHttpClient()
+    .send(request, HttpResponse.BodyHandlers.ofString());
+if (response.statusCode() != 201) {
+    throw new RuntimeException("Gagal kirim invoice: " + response.body());
+}
+System.out.println(response.body());`,
+  };
+}
 
 function buildSnippets(baseUrl: string, memberId: string, secret: string): Record<Lang, string> {
   const url = `${baseUrl}/emails/api-send`;
@@ -128,10 +269,14 @@ export default function IntegrationCodeSamples({
   exampleSecret,
 }: IntegrationCodeSamplesProps) {
   const [activeLang, setActiveLang] = useState<Lang>('curl');
+  const [activeRecipe, setActiveRecipe] = useState<Recipe>('otp');
   const [copied, setCopied] = useState(false);
 
   const secret = exampleSecret ?? 'SECRET_ANDA';
-  const snippets = buildSnippets(baseUrl, exampleMemberId, secret);
+  const snippets =
+    activeRecipe === 'invoice'
+      ? buildInvoiceSnippets(baseUrl, exampleMemberId, secret)
+      : buildSnippets(baseUrl, exampleMemberId, secret);
 
   async function handleCopy() {
     try {
@@ -200,8 +345,29 @@ export default function IntegrationCodeSamples({
                 Default <code>false</code> — newline di body dianggap plain text dan dikonversi jadi baris baru.
               </td>
             </tr>
+            <tr>
+              <td><code>attachments</code></td>
+              <td>Tidak</td>
+              <td>
+                Lampiran file (mis. invoice PDF). Array berisi objek{' '}
+                <code>{'{ filename, contentBase64 }'}</code> — <code>contentBase64</code> adalah isi
+                file yang di-encode base64. Maksimal 10 file per email, masing-masing maksimal 25 MB.
+              </td>
+            </tr>
           </tbody>
         </table>
+      </div>
+
+      <div className="integration-recipe-tabs">
+        {(Object.keys(RECIPE_LABEL) as Recipe[]).map((recipe) => (
+          <button
+            key={recipe}
+            className={`integration-recipe-tab${activeRecipe === recipe ? ' active' : ''}`}
+            onClick={() => setActiveRecipe(recipe)}
+          >
+            {RECIPE_LABEL[recipe]}
+          </button>
+        ))}
       </div>
 
       <div className="integration-tabs">

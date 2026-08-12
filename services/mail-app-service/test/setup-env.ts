@@ -10,3 +10,5 @@ process.env.DEFAULT_RECALL_WINDOW_SECONDS = '2';
 process.env.MAX_ATTACHMENT_SIZE_KB = '25600';
 // Arahkan upload logo template ke folder temp, bukan direktori production sungguhan.
 process.env.TEMPLATE_LOGOS_DIR = require('path').join(__dirname, '.tmp-template-logos');
+// Idem untuk file lampiran email.
+process.env.ATTACHMENTS_DIR = require('path').join(__dirname, '.tmp-attachments');

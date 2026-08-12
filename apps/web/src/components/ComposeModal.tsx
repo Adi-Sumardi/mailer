@@ -1,11 +1,11 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
-import { api, ApiError } from '../lib/apiClient';
+import { api, apiUploadFile, ApiError } from '../lib/apiClient';
 import type { EmailMessage } from '../lib/types';
 
 interface AttachedFileItem {
   filename: string;
   sizeKb: number;
-  fileObj?: File;
+  fileObj: File;
 }
 
 interface ComposeModalProps {
@@ -49,15 +49,12 @@ export default function ComposeModal({ onClose, onSent, replyTo }: ComposeModalP
         parentEmailId: replyTo?.parentEmailId,
       });
 
-      // Simpan metadata attachment
+      // Upload file SUNGGUHAN (multipart), bukan metadata. Kegagalan di sini TIDAK boleh
+      // ditelan diam-diam — dulu error di-.catch(() => undefined) sehingga user melihat
+      // "terkirim" padahal lampirannya tidak pernah ikut. Sekarang error dilempar ke atas
+      // supaya user tahu dan bisa mengulang.
       for (const att of attachments) {
-        await api
-          .post(`/emails/${email.id}/attachments`, {
-            filename: att.filename,
-            sizeKb: att.sizeKb,
-            storagePath: `attachments/${email.id}/${att.filename}`,
-          })
-          .catch(() => undefined);
+        await apiUploadFile(`/emails/${email.id}/attachments`, 'file', att.fileObj);
       }
 
       onSent(email);

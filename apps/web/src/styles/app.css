@@ -967,6 +967,15 @@ select:focus {
   border-radius: var(--radius-sm);
   font-size: 12px;
   border: 1px solid var(--color-outline);
+  color: var(--color-on-surface);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.email-attachment-chip:hover {
+  border-color: var(--color-primary-accent);
+  background: var(--color-error-container);
 }
 
 /* ===== Admin (Tenant/Domain management) ===== */
@@ -1808,6 +1817,32 @@ select:focus {
 
 .integration-params td code {
   font-size: 12px;
+}
+
+/* Pemilih skenario (OTP / Invoice) — satu tingkat DI ATAS tab bahasa, jadi dibedakan
+   bentuknya (pill) supaya tidak terbaca sebagai deretan tab yang sama. */
+.integration-recipe-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.integration-recipe-tab {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+}
+
+.integration-recipe-tab.active {
+  background: var(--color-primary-accent);
+  border-color: var(--color-primary-accent);
+  color: white;
 }
 
 .integration-tabs {

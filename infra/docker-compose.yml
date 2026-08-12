@@ -76,9 +76,14 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       TEMPLATE_LOGOS_DIR: /app/template-logos
+      ATTACHMENTS_DIR: /app/attachments
     volumes:
       # Logo template branding per mailbox — named volume, persist lintas rebuild/redeploy.
       - template-logos:/app/template-logos
+      # File lampiran email (mis. invoice PDF). WAJIB named volume — kalau ikut layer
+      # container, seluruh lampiran hilang tiap redeploy dan pengiriman email yang
+      # mereferensikannya akan gagal (buildAttachmentList sengaja tidak punya fallback).
+      - attachments:/app/attachments
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on: [postgres]
@@ -145,3 +150,4 @@ networks:
 volumes:
   pgdata:
   template-logos:
+  attachments:

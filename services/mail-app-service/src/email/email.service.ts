@@ -19,10 +19,21 @@ import { EmailTemplateService } from '../email-template/email-template.service';
 import { ComposeEmailDto } from './dto/compose-email.dto';
 import { UpdateFlagsDto } from './dto/update-flags.dto';
 import { SearchEmailDto } from './dto/search-email.dto';
-import { AddAttachmentDto } from './dto/add-attachment.dto';
 
 const LOGO_PATH = path.join(__dirname, 'assets', 'adilabs-logo.png');
 const LOGO_CID = 'adilabs-logo';
+
+// Batas hard untuk multer interceptor (harus konstanta — dievaluasi saat decorator dibaca,
+// sebelum ConfigService tersedia). Batas per-tenant yang sesungguhnya tetap divalidasi ulang
+// di addAttachment() lewat MAX_ATTACHMENT_SIZE_KB, jadi angka ini cuma pagar terluar.
+export const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+
+// Nama file di disk dibuat sendiri (uuid + ekstensi asli), TIDAK memakai nama dari user —
+// mencegah path traversal (../) dan tabrakan nama antar email.
+function safeStoredFilename(originalName: string): string {
+  const ext = path.extname(originalName).slice(0, 20).replace(/[^a-zA-Z0-9.]/g, '');
+  return `${randomUUID()}${ext}`;
+}
 
 interface TemplateForRender {
   title: string | null;
@@ -89,6 +100,56 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
         </div>
       </div>
     `;
+  }
+
+  // FR-11a.2: batas waktu delayed-send. Dipakai saat compose DAN saat lampiran ditambahkan
+  // (lihat storeAttachment) supaya hitungan mundur mulai ulang setelah upload selesai.
+  private buildRecallDeadline(from: Date = new Date()): Date {
+    const windowSeconds = Number(this.config.get<string>('DEFAULT_RECALL_WINDOW_SECONDS', '20'));
+    return new Date(from.getTime() + windowSeconds * 1000);
+  }
+
+  private attachmentsDir(): string {
+    return this.config.get<string>('ATTACHMENTS_DIR', path.join(process.cwd(), 'attachments'));
+  }
+
+  // storagePath disimpan RELATIF terhadap ATTACHMENTS_DIR (mis. "<emailId>/<uuid>.pdf") supaya
+  // data tetap valid kalau path mount container berubah. Hasil resolve diverifikasi masih di
+  // dalam direktori attachment — menolak nilai lama/berbahaya yang mengandung "../".
+  private resolveAttachmentPath(storagePath: string): string | null {
+    const dir = path.resolve(this.attachmentsDir());
+    const resolved = path.resolve(dir, storagePath);
+    if (resolved !== dir && !resolved.startsWith(dir + path.sep)) {
+      this.logger.warn(`storagePath di luar direktori attachment ditolak: ${storagePath}`);
+      return null;
+    }
+    return resolved;
+  }
+
+  // Menyusun daftar lampiran untuk nodemailer dari file SUNGGUHAN di disk.
+  //
+  // Kalau file-nya tidak ada, ini SENGAJA melempar error supaya pengiriman gagal terang-terangan
+  // (email ditandai 'failed' oleh pemanggil). Sebelumnya di sini ada fallback yang melampirkan
+  // Buffer berisi teks "Lampiran: <nama> (<n> KB)" menggantikan file asli — akibatnya penerima
+  // menerima file bernama mis. invoice.pdf yang isinya teks biasa (PDF rusak), sementara
+  // pengirim melihat status "terkirim". Diam-diam mengirim dokumen palsu jauh lebih berbahaya
+  // daripada gagal, terutama untuk invoice — jadi fallback itu dihapus.
+  private async buildAttachmentList(emailId: string, template: TemplateForRender | null) {
+    const attachments = await this.prisma.attachment.findMany({ where: { emailId } });
+
+    const attachmentList: { filename: string; path: string; cid?: string }[] = attachments.map((att) => {
+      const resolved = this.resolveAttachmentPath(att.storagePath);
+      if (!resolved || !fs.existsSync(resolved)) {
+        throw new Error(
+          `File lampiran '${att.filename}' tidak ditemukan di penyimpanan (${att.storagePath}) — pengiriman dibatalkan agar tidak mengirim lampiran kosong/rusak`,
+        );
+      }
+      return { filename: att.filename, path: resolved };
+    });
+
+    const logoAttachment = this.getLogoAttachment(template);
+    if (logoAttachment) attachmentList.push(logoAttachment);
+    return attachmentList;
   }
 
   private getLogoAttachment(template: TemplateForRender | null) {
@@ -204,10 +265,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     }
 
     // FR-11a.2: penerima eksternal — delayed-send window sebelum benar-benar dikirim.
-    const windowSeconds = Number(
-      this.config.get<string>('DEFAULT_RECALL_WINDOW_SECONDS', '20'),
-    );
-    const recallDeadlineAt = new Date(now.getTime() + windowSeconds * 1000);
+    const recallDeadlineAt = this.buildRecallDeadline(now);
 
     return this.prisma.email.create({
       data: {
@@ -285,9 +343,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
       const targetMxHost = mxRecords[0].exchange;
 
       const template = await this.emailTemplateService.getForRender(email.mailboxId);
-      const attachments = await this.prisma.attachment.findMany({
-        where: { emailId: email.id },
-      });
+      const attachmentList = await this.buildAttachmentList(email.id, template);
 
       const mxTransporter = nodemailer.createTransport({
         host: targetMxHost,
@@ -296,18 +352,6 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
         tls: { rejectUnauthorized: false },
         connectionTimeout: 10000,
       });
-
-      const attachmentList = attachments.map((att) => {
-        if (fs.existsSync(att.storagePath)) {
-          return { filename: att.filename, path: att.storagePath };
-        }
-        return {
-          filename: att.filename,
-          content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
-        };
-      });
-      const logoAttachment = this.getLogoAttachment(template);
-      if (logoAttachment) attachmentList.push(logoAttachment);
 
       await mxTransporter.sendMail({
         from: email.fromAddr,
@@ -341,21 +385,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     if (transporter) {
       try {
         const template = await this.emailTemplateService.getForRender(email.mailboxId);
-        const attachments = await this.prisma.attachment.findMany({
-          where: { emailId: email.id },
-        });
-
-        const attachmentList = attachments.map((att) => {
-          if (fs.existsSync(att.storagePath)) {
-            return { filename: att.filename, path: att.storagePath };
-          }
-          return {
-            filename: att.filename,
-            content: Buffer.from(`Lampiran: ${att.filename} (${att.sizeKb} KB)\nSendagoMail Engine Attachment Metadata`),
-          };
-        });
-        const logoAttachment = this.getLogoAttachment(template);
-        if (logoAttachment) attachmentList.push(logoAttachment);
+        const attachmentList = await this.buildAttachmentList(email.id, template);
 
         await transporter.sendMail({
           from: email.fromAddr,
@@ -506,6 +536,12 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     const trashFolder = await this.mailboxService.getFolderByType(mailboxId, 'trash');
 
     if (email.folderId === trashFolder.id) {
+      // Hapus file fisiknya juga, jangan cuma row-nya — kalau tidak, file lampiran menumpuk
+      // selamanya di disk tanpa ada yang mereferensikan (orphan).
+      const dir = this.resolveAttachmentPath(id);
+      if (dir) {
+        await fs.promises.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+      }
       await this.prisma.attachment.deleteMany({ where: { emailId: id } });
       return this.prisma.email.delete({ where: { id } });
     }
@@ -516,25 +552,86 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  // FR-09: upload/download attachment dengan batas ukuran. Metadata saja — file sesungguhnya
-  // diasumsikan sudah diunggah ke object storage (S3/MinIO) lewat presigned URL sebelumnya.
-  async addAttachment(mailboxId: string, emailId: string, dto: AddAttachmentDto) {
+  // FR-09: upload attachment dengan batas ukuran — file SUNGGUHAN ditulis ke disk
+  // (ATTACHMENTS_DIR, di-bind-mount seperti TEMPLATE_LOGOS_DIR), bukan sekadar metadata.
+  async addAttachment(mailboxId: string, emailId: string, file: { originalname: string; size: number; buffer: Buffer }) {
     await this.findOwnedOrThrow(mailboxId, emailId);
+    return this.storeAttachment(emailId, file.originalname, file.buffer, file.size);
+  }
 
+  // Jalur lampiran untuk email transaksional lewat POST /emails/api-send (mis. invoice PDF
+  // dari backend aplikasi pihak ketiga) — konten dikirim sebagai base64 di body JSON, karena
+  // integrator API umumnya lebih mudah mengirim JSON daripada multipart.
+  async addApiAttachments(
+    emailId: string,
+    attachments: { filename: string; contentBase64: string }[],
+  ) {
+    for (const att of attachments) {
+      let buffer: Buffer;
+      try {
+        buffer = Buffer.from(att.contentBase64, 'base64');
+      } catch {
+        throw new BadRequestException(`Lampiran '${att.filename}': contentBase64 bukan base64 yang valid`);
+      }
+      // Buffer.from() dengan input sampah TIDAK melempar error, dia menghasilkan buffer kosong/
+      // terpotong diam-diam — jadi panjang nol diperlakukan sebagai input tidak valid di sini.
+      if (buffer.length === 0) {
+        throw new BadRequestException(`Lampiran '${att.filename}': contentBase64 kosong atau bukan base64 yang valid`);
+      }
+      await this.storeAttachment(emailId, att.filename, buffer, buffer.length);
+    }
+  }
+
+  private async storeAttachment(emailId: string, originalName: string, buffer: Buffer, sizeBytes: number) {
     const maxSizeKb = Number(this.config.get<string>('MAX_ATTACHMENT_SIZE_KB', '25600'));
-    if (dto.sizeKb > maxSizeKb) {
+    const sizeKb = Math.max(1, Math.ceil(sizeBytes / 1024));
+    if (sizeKb > maxSizeKb) {
       throw new BadRequestException(
         `Ukuran attachment melebihi batas ${maxSizeKb}KB (dikonfigurasi admin)`,
       );
     }
 
-    return this.prisma.attachment.create({
-      data: { emailId, filename: dto.filename, sizeKb: dto.sizeKb, storagePath: dto.storagePath },
+    const relativePath = path.join(emailId, safeStoredFilename(originalName));
+    const absolutePath = path.join(this.attachmentsDir(), relativePath);
+    await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
+    await fs.promises.writeFile(absolutePath, buffer);
+
+    const attachment = await this.prisma.attachment.create({
+      data: { emailId, filename: originalName, sizeKb, storagePath: relativePath },
     });
+
+    // Compose (UI) membuat email langsung berstatus 'queued' dengan jendela recall pendek
+    // (DEFAULT_RECALL_WINDOW_SECONDS, 5 detik di production), lalu client meng-upload lampiran
+    // SESUDAHNYA. Untuk file besar, upload bisa lebih lama dari jendela itu — scheduler keburu
+    // mengirim emailnya tanpa lampiran. Menyetel ulang deadline tiap kali lampiran masuk
+    // membuat hitungan mundur baru mulai setelah upload terakhir selesai.
+    await this.prisma.email.updateMany({
+      where: { id: emailId, sendStatus: 'queued' },
+      data: { recallDeadlineAt: this.buildRecallDeadline() },
+    });
+
+    return attachment;
   }
 
   async listAttachments(mailboxId: string, emailId: string) {
     await this.findOwnedOrThrow(mailboxId, emailId);
     return this.prisma.attachment.findMany({ where: { emailId } });
+  }
+
+  // FR-09 (sisi download): kirim file asli ke pemilik mailbox. Kepemilikan email divalidasi
+  // dulu supaya lampiran mailbox lain tidak bisa diambil hanya dengan menebak attachmentId.
+  async getAttachmentFile(mailboxId: string, emailId: string, attachmentId: string) {
+    await this.findOwnedOrThrow(mailboxId, emailId);
+    const attachment = await this.prisma.attachment.findFirst({
+      where: { id: attachmentId, emailId },
+    });
+    if (!attachment) {
+      throw new NotFoundException(`Lampiran ${attachmentId} tidak ditemukan`);
+    }
+    const resolved = this.resolveAttachmentPath(attachment.storagePath);
+    if (!resolved || !fs.existsSync(resolved)) {
+      throw new NotFoundException(`File lampiran '${attachment.filename}' tidak ada di penyimpanan`);
+    }
+    return { filePath: resolved, filename: attachment.filename };
   }
 }

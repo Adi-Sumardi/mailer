@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,13 +8,18 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { EmailService } from './email.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import type { Response } from 'express';
+import { EmailService, MAX_ATTACHMENT_SIZE_BYTES } from './email.service';
 import { ComposeEmailDto } from './dto/compose-email.dto';
 import { UpdateFlagsDto } from './dto/update-flags.dto';
 import { SearchEmailDto } from './dto/search-email.dto';
-import { AddAttachmentDto } from './dto/add-attachment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtPayload } from '../auth/jwt-payload.interface';
@@ -66,18 +72,40 @@ export class EmailController {
     return this.emailService.remove(user.mailboxId, id);
   }
 
-  // FR-09
+  // FR-09: upload file SUNGGUHAN (multipart), bukan metadata — field form: "file".
   @Post(':id/attachments')
+  @UseInterceptors(
+    FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: MAX_ATTACHMENT_SIZE_BYTES } }),
+  )
   addAttachment(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
-    @Body() dto: AddAttachmentDto,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.emailService.addAttachment(user.mailboxId, id, dto);
+    if (!file) {
+      throw new BadRequestException('File lampiran tidak ditemukan di request (field: "file")');
+    }
+    return this.emailService.addAttachment(user.mailboxId, id, file);
   }
 
   @Get(':id/attachments')
   listAttachments(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.emailService.listAttachments(user.mailboxId, id);
+  }
+
+  // FR-09 (sisi download): unduh file lampiran asli.
+  @Get(':id/attachments/:attachmentId/download')
+  async downloadAttachment(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Param('attachmentId') attachmentId: string,
+    @Res() res: Response,
+  ) {
+    const { filePath, filename } = await this.emailService.getAttachmentFile(
+      user.mailboxId,
+      id,
+      attachmentId,
+    );
+    res.download(filePath, filename);
   }
 }

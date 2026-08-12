@@ -3,6 +3,8 @@ import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { promises as dns } from 'dns';
 import * as nodemailer from 'nodemailer';
+import * as fs from 'fs';
+import * as path from 'path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MailboxService } from '../src/mailbox/mailbox.service';
@@ -304,6 +306,88 @@ describe('Mail app (e2e) — FR-06 s/d FR-11a', () => {
 
     await request(app.getHttpServer())
       .get(`/emails/${composed.body.id}`)
+      .set('Authorization', `Bearer ${tokenB}`)
+      .expect(404);
+  });
+
+  // ===== FR-09: lampiran file sungguhan =====
+  const PDF_BYTES = Buffer.from('%PDF-1.4\n%INVOICE-BINARY\n%%EOF\n', 'utf8');
+
+  async function composeWithPdf(token: string, toAddr: string) {
+    const composed = await request(app.getHttpServer())
+      .post('/emails')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ toAddr, subject: 'Invoice #1', body: 'Terlampir invoice.' })
+      .expect(201);
+
+    const uploaded = await request(app.getHttpServer())
+      .post(`/emails/${composed.body.id}/attachments`)
+      .set('Authorization', `Bearer ${token}`)
+      .attach('file', PDF_BYTES, 'invoice.pdf')
+      .expect(201);
+
+    return { emailId: composed.body.id as string, attachmentId: uploaded.body.id as string };
+  }
+
+  it('FR-09: upload lampiran menyimpan BYTE ASLI ke disk, dan download mengembalikan byte yang sama', async () => {
+    const { emailId, attachmentId } = await composeWithPdf(tokenA, 'klien@external.test');
+
+    const stored = await prisma.attachment.findMany({ where: { emailId } });
+    expect(stored).toHaveLength(1);
+    const absolutePath = path.join(process.env.ATTACHMENTS_DIR as string, stored[0].storagePath);
+    expect(fs.readFileSync(absolutePath).equals(PDF_BYTES)).toBe(true);
+
+    const downloaded = await request(app.getHttpServer())
+      .get(`/emails/${emailId}/attachments/${attachmentId}/download`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+    expect(Buffer.from(downloaded.body).equals(PDF_BYTES)).toBe(true);
+  });
+
+  it('FR-09: lampiran ikut terkirim ke SMTP sebagai file asli (bukan teks placeholder)', async () => {
+    (dns.resolveMx as jest.Mock).mockResolvedValue([{ exchange: 'mx.external.test', priority: 10 }]);
+    const sendMail = jest.fn().mockResolvedValue({});
+    (nodemailer.createTransport as jest.Mock).mockReturnValue({ sendMail });
+
+    await composeWithPdf(tokenA, 'klien@external.test');
+    await sleep(2500);
+    await emailService.dispatchDueEmails();
+
+    expect(sendMail).toHaveBeenCalled();
+    const sent = sendMail.mock.calls[0][0].attachments as Array<{ filename: string; path?: string; content?: Buffer }>;
+    const invoice = sent.find((a) => a.filename === 'invoice.pdf');
+    expect(invoice).toBeDefined();
+    // Dulu di sini dikirim `content: Buffer("Lampiran: invoice.pdf ...")` — teks placeholder
+    // yang membuat penerima menerima PDF rusak. Sekarang harus berupa path ke file asli.
+    expect(invoice?.path).toBeDefined();
+    expect(invoice?.content).toBeUndefined();
+    expect(fs.readFileSync(invoice!.path as string).equals(PDF_BYTES)).toBe(true);
+  });
+
+  it('FR-09: kalau file lampiran hilang dari disk, pengiriman GAGAL (bukan diam-diam mengirim lampiran palsu)', async () => {
+    (dns.resolveMx as jest.Mock).mockResolvedValue([{ exchange: 'mx.external.test', priority: 10 }]);
+    const sendMail = jest.fn().mockResolvedValue({});
+    (nodemailer.createTransport as jest.Mock).mockReturnValue({ sendMail });
+
+    const { emailId } = await composeWithPdf(tokenA, 'klien@external.test');
+
+    // Simulasi file hilang (mis. volume tidak ter-mount saat redeploy).
+    const stored = await prisma.attachment.findMany({ where: { emailId } });
+    fs.rmSync(path.join(process.env.ATTACHMENTS_DIR as string, stored[0].storagePath), { force: true });
+
+    await sleep(2500);
+    await emailService.dispatchDueEmails();
+
+    expect(sendMail).not.toHaveBeenCalled();
+    const email = await prisma.email.findUnique({ where: { id: emailId } });
+    expect(email?.sendStatus).toBe('failed');
+  });
+
+  it('FR-09: menolak unduh lampiran milik mailbox lain (404)', async () => {
+    const { emailId, attachmentId } = await composeWithPdf(tokenA, 'klien@external.test');
+
+    await request(app.getHttpServer())
+      .get(`/emails/${emailId}/attachments/${attachmentId}/download`)
       .set('Authorization', `Bearer ${tokenB}`)
       .expect(404);
   });

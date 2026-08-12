@@ -1,4 +1,28 @@
-import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+
+// Satu lampiran untuk email transaksional lewat API (mis. invoice PDF). Konten dikirim
+// base64 di body JSON — integrator API umumnya lebih mudah mengirim JSON daripada multipart.
+export class ApiSendAttachmentDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  filename: string;
+
+  @IsString()
+  @IsNotEmpty()
+  contentBase64: string;
+}
 
 export class ApiSendEmailDto {
   @IsString()
@@ -26,4 +50,13 @@ export class ApiSendEmailDto {
   @IsOptional()
   @IsBoolean()
   isHtml?: boolean;
+
+  // Batas 10 lampiran per email; ukuran total tetap dibatasi MAX_ATTACHMENT_SIZE_KB per file
+  // (divalidasi di EmailService.storeAttachment).
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => ApiSendAttachmentDto)
+  attachments?: ApiSendAttachmentDto[];
 }

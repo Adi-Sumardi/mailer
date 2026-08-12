@@ -5,6 +5,9 @@
 **/config/rspamd/dkim/
 services/domain-provisioning/test/.tmp-dkim-keys/
 services/mail-app-service/test/.tmp-template-logos/
+services/mail-app-service/test/.tmp-attachments/
+# File lampiran email di dev lokal (production pakai named volume, lihat infra/docker-compose.yml)
+services/mail-app-service/attachments/
 
 # Dependencies
 node_modules/

@@ -148,6 +148,29 @@ export async function apiUploadFile<T>(path: string, fieldName: string, file: Fi
   return res.json() as Promise<T>;
 }
 
+// Unduh file lampiran. Endpoint-nya butuh Authorization header, jadi tidak bisa dipakai
+// langsung sebagai href <a download> — file diambil dulu sebagai blob, baru "diklik" lewat
+// anchor sementara.
+export async function apiDownloadFile(path: string, filename: string): Promise<void> {
+  const token = tokenStorage.getAccessToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(res.status, errorBody.message ?? 'Gagal mengunduh lampiran');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 // Ambil response biner (mis. preview logo) sebagai object URL siap dipakai di <img src>.
 // Endpoint gambar butuh Authorization header, jadi tidak bisa langsung dipakai sebagai <img src>.
 export async function apiGetImageObjectUrl(path: string): Promise<string | null> {
