@@ -615,7 +615,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Inbound dari dunia luar: Postfix mem-pipe email masuk untuk domain tenant ke skrip
-  // sendago-ingest, yang meneruskannya ke sini (lihat mail-engine/config/postfix-master.cf).
+  // sendago-ingest, yang meneruskannya ke sini (lihat mail-engine/config/user-patches.sh).
   // Email disimpan ke Postgres — SATU sumber kebenaran, sama seperti email internal — bukan
   // ke maildir, supaya langsung muncul di webmail tanpa perlu sinkronisasi IMAP terpisah.
   //

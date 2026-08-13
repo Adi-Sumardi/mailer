@@ -1,6 +1,6 @@
 #!/bin/sh
 # Menerima satu email masuk dari Postfix (transport "sendago-ingest", lihat
-# config/postfix-master.cf) dan meneruskannya ke mail-app-service untuk disimpan ke
+# config/user-patches.sh) dan meneruskannya ke mail-app-service untuk disimpan ke
 # Inbox penerima di Postgres.
 #
 # stdin : pesan mentah (RFC822)

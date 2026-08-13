@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-// Nama transport di Postfix master.cf (lihat mail-engine/config/postfix-master.cf).
+// Nama transport di Postfix master.cf (lihat mail-engine/config/user-patches.sh).
 const INGEST_TRANSPORT = 'sendago-ingest:';
 
 const GENERATED_HEADER = `# DI-GENERATE OTOMATIS oleh domain-provisioning dari database — jangan edit manual,
