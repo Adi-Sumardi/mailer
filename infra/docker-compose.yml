@@ -40,6 +40,9 @@ services:
       # aktif, celah yang sempat bikin tenant baru gagal kirim tanpa ada yang sadar).
       DKIM_KEYS_DIR: /app/rspamd/dkim
       DKIM_OVERRIDE_DIR: /app/rspamd/override.d
+      # Peta Postfix (relay_domains + transport_maps) supaya email MASUK untuk domain tenant
+      # diterima dan di-pipe ke mail-app-service — lihat mail-engine-handoff.util.ts.
+      POSTFIX_MAPS_DIR: /app/mail-engine-config
       # Domain operator platform (bukan tenant) yang DKIM-nya di-setup manual, bukan lewat
       # aplikasi ini — lihat komentar DKIM_STATIC_DOMAINS di .env.example service ini.
       DKIM_STATIC_DOMAINS: adilabs.id:mail
@@ -52,6 +55,9 @@ services:
       # Bind mount LANGSUNG ke direktori host yang dibaca mail-engine (project compose
       # TERPISAH, lihat mail-engine/docker-compose.yml: ./config/:/tmp/docker-mailserver/).
       - ../mail-engine/config/rspamd:/app/rspamd
+      # Root config mail-engine, untuk menulis peta domain Postfix (file .cf-nya ada langsung
+      # di direktori ini, satu tingkat di atas rspamd/).
+      - ../mail-engine/config:/app/mail-engine-config
     depends_on: [postgres]
     ports: ["18001:3001"]
     networks: [sendagomail]

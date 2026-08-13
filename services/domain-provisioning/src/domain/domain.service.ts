@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,9 +11,10 @@ import {
   verifyDomainTxtRecord,
 } from './dns-record.util';
 import { regenerateDkimSigningConfig, writeDkimKeyFile } from './dkim-handoff.util';
+import { regeneratePostfixTenantMaps } from './mail-engine-handoff.util';
 
 @Injectable()
-export class DomainService {
+export class DomainService implements OnModuleInit {
   private readonly logger = new Logger(DomainService.name);
 
   constructor(
@@ -73,27 +74,7 @@ export class DomainService {
         privateKeyPem: dkim.privateKeyPem,
       });
 
-      // Regenerate config signing dari SEMUA domain yang sudah punya DKIM key (bukan cuma yang
-      // baru dibuat) — supaya file override tetap konsisten kalau sebelumnya sempat gagal ditulis.
-      // Digabung dengan DKIM_STATIC_DOMAINS (domain operator platform, mis. domain super_admin,
-      // yang key-nya digenerate manual lewat CLI docker-mailserver, bukan lewat aplikasi ini —
-      // jadi tidak pernah ada row-nya di tabel `domain`). Tanpa ini, domain statis itu akan
-      // KE-DROP diam-diam dari dkim_signing.conf setiap kali ada tenant domain lain ditambahkan,
-      // karena regenerate di bawah ini penuh (bukan patch) — persis kelas bug yang sedang
-      // diperbaiki di sini, jangan sampai terulang untuk domain operator sendiri.
-      const allDomains = await this.prisma.domain.findMany({
-        where: { dkimPrivateKey: { not: null } },
-        select: { domainName: true, dkimSelector: true },
-      });
-      await regenerateDkimSigningConfig({
-        overrideDir,
-        domains: [
-          ...allDomains
-            .filter((d): d is { domainName: string; dkimSelector: string } => d.dkimSelector !== null)
-            .map((d) => ({ domainName: d.domainName, selector: d.dkimSelector })),
-          ...this.parseStaticDkimDomains(),
-        ],
-      });
+      await this.syncMailEngineConfig();
     } catch (err) {
       this.logger.warn(
         `Gagal menulis DKIM key ke mail-engine untuk domain ${dto.domainName}: ${(err as Error).message}`,
@@ -101,6 +82,59 @@ export class DomainService {
     }
 
     return this.toPublicDomain(domain);
+  }
+
+  // Menulis ulang SELURUH konfigurasi mail-engine yang diturunkan dari database:
+  //   1. dkim_signing.conf  — domain mana yang ditandatangani Rspamd
+  //   2. peta Postfix       — domain mana yang email masuknya diterima & di-pipe ke aplikasi
+  //
+  // Selalu di-generate dari daftar LENGKAP di DB (bukan menambah baris untuk domain baru saja),
+  // supaya file tetap konsisten walau sebelumnya sempat gagal ditulis.
+  private async syncMailEngineConfig(): Promise<void> {
+    const overrideDir = this.config.get<string>(
+      'DKIM_OVERRIDE_DIR',
+      '../../mail-engine/config/rspamd/override.d',
+    );
+    const mapsDir = this.config.get<string>('POSTFIX_MAPS_DIR', '../../mail-engine/config');
+
+    const allDomains = await this.prisma.domain.findMany({
+      where: { dkimPrivateKey: { not: null } },
+      select: { domainName: true, dkimSelector: true },
+    });
+
+    // DKIM_STATIC_DOMAINS = domain operator platform (mis. adilabs.id) yang key-nya digenerate
+    // manual lewat CLI docker-mailserver, bukan lewat aplikasi ini — jadi tidak pernah punya row
+    // di tabel `domain`. Tanpa digabung di sini, domain itu KE-DROP diam-diam dari
+    // dkim_signing.conf setiap kali domain tenant lain ditambahkan, karena regenerate ini penuh.
+    await regenerateDkimSigningConfig({
+      overrideDir,
+      domains: [
+        ...allDomains
+          .filter((d): d is { domainName: string; dkimSelector: string } => d.dkimSelector !== null)
+          .map((d) => ({ domainName: d.domainName, selector: d.dkimSelector })),
+        ...this.parseStaticDkimDomains(),
+      ],
+    });
+
+    // Domain operator SENGAJA tidak ikut di sini: adilabs.id sudah punya mailbox sungguhan di
+    // Postfix/Dovecot (virtual_mailbox_domains), merutekannya ke pipe ingest justru akan
+    // membajak email operator dari maildir-nya sendiri.
+    await regeneratePostfixTenantMaps({
+      mapsDir,
+      domainNames: allDomains.map((d) => d.domainName),
+    });
+  }
+
+  // Backfill saat service start: domain yang sudah ada SEBELUM fitur ini dibuat tidak akan
+  // pernah punya konfigurasinya kalau hanya di-generate saat create(). Persis celah migrasi
+  // yang bikin email tenant lama gagal DKIM/gagal diterima tanpa ada yang sadar.
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.syncMailEngineConfig();
+      this.logger.log('Konfigurasi mail-engine (DKIM + peta domain Postfix) disinkronkan dari database');
+    } catch (err) {
+      this.logger.warn(`Gagal sinkronisasi konfigurasi mail-engine saat startup: ${(err as Error).message}`);
+    }
   }
 
   // dkimPrivateKey TIDAK PERNAH dikembalikan lewat API — hanya dipakai internal untuk hand-off

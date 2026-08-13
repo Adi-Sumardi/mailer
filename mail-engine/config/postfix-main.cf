@@ -1,0 +1,22 @@
+# Override main.cf — ditambahkan otomatis oleh docker-mailserver ke konfigurasi Postfix.
+#
+# Tujuan: menerima email MASUK untuk domain tenant (mis. yapinet.id, simonas.id) lalu
+# menyerahkannya ke aplikasi, BUKAN ke maildir. Mailbox tenant hidup di Postgres
+# (mail-app-service), jadi maildir akan jadi lubang hitam yang tidak terlihat user.
+#
+# Sebelum ini, Postfix cuma mengenal adilabs.id sehingga email ke domain tenant ditolak
+# "Relay access denied" / "loops back to myself" — MX-nya menunjuk ke sini tapi server
+# merasa tidak bertanggung jawab atas domain itu.
+#
+# Kedua file peta di bawah di-generate ulang dari database oleh domain-provisioning
+# (lihat mail-engine-handoff.util.ts) setiap kali domain ditambahkan, dan saat service
+# start. texthash: dipakai supaya tidak perlu menjalankan `postmap` — Postfix membaca
+# file teksnya langsung, jadi perubahan langsung berlaku tanpa langkah kompilasi.
+relay_domains = texthash:/tmp/docker-mailserver/sendago-tenant-domains.cf
+transport_maps = texthash:/tmp/docker-mailserver/sendago-transport.cf
+
+# pipe(8) menjalankan skrip dengan environment yang SANGAT dibatasi (default cuma
+# TZ MAIL_CONFIG LANG) — tanpa baris ini, skrip ingest tidak akan pernah melihat URL
+# maupun API key-nya dan setiap email masuk akan ter-defer. Nilainya diisi dari
+# mail-engine/.env (lihat .env.example).
+export_environment = TZ MAIL_CONFIG LANG SENDAGO_INGEST_URL SENDAGO_INTERNAL_API_KEY

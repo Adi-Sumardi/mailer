@@ -27,10 +27,17 @@ services:
       - ./config/:/tmp/docker-mailserver/
       - ./letsencrypt/:/etc/letsencrypt/:ro
       - /etc/localtime:/etc/localtime:ro
+      # Skrip yang dipanggil transport "sendago-ingest" untuk menyerahkan email masuk
+      # domain tenant ke mail-app-service (lihat config/postfix-master.cf).
+      - ./scripts/sendago-ingest.sh:/usr/local/bin/sendago-ingest.sh:ro
     restart: unless-stopped
     stop_grace_period: 1m
     cap_add:
       - NET_ADMIN
+    # mail-app-service berjalan sebagai docker-compose project TERPISAH (infra/), port-nya
+    # dipublish ke host — dijangkau lewat host.docker.internal, bukan nama container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: "ss --listening --tcp | grep -P 'LISTEN.+:smtp' || exit 1"
       timeout: 3s

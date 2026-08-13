@@ -1,0 +1,12 @@
+# Override master.cf — ditambahkan otomatis oleh docker-mailserver ke konfigurasi Postfix.
+#
+# Transport "sendago-ingest": mem-pipe email masuk untuk domain tenant ke skrip yang
+# meneruskannya ke mail-app-service lewat HTTP (lihat postfix-main.cf untuk alasannya).
+#
+# flags=DRhu  D = tambahkan header Delivered-To, R = tambahkan Return-Path,
+#             h/u = huruf kecilkan domain & user pada ${recipient}
+# user=docker  UID 5000, user non-root yang sama dipakai docker-mailserver untuk mail.
+#
+# Skrip menerima pesan mentah lewat stdin dan alamat penerima sebagai argumen.
+sendago-ingest unix - n n - - pipe
+  flags=DRhu user=docker argv=/usr/local/bin/sendago-ingest.sh ${recipient}

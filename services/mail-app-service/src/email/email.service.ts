@@ -13,6 +13,7 @@ import * as dns from 'dns';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as nodemailer from 'nodemailer';
+import { simpleParser } from 'mailparser';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailboxService } from '../mailbox/mailbox.service';
 import { EmailTemplateService } from '../email-template/email-template.service';
@@ -611,6 +612,62 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     });
 
     return attachment;
+  }
+
+  // Inbound dari dunia luar: Postfix mem-pipe email masuk untuk domain tenant ke skrip
+  // sendago-ingest, yang meneruskannya ke sini (lihat mail-engine/config/postfix-master.cf).
+  // Email disimpan ke Postgres — SATU sumber kebenaran, sama seperti email internal — bukan
+  // ke maildir, supaya langsung muncul di webmail tanpa perlu sinkronisasi IMAP terpisah.
+  //
+  // Melempar NotFoundException kalau alamat penerima tidak dikenal; skrip pemanggil
+  // menerjemahkannya jadi exit code bounce permanen, BUKAN menerima lalu membuangnya diam-diam.
+  async ingestInbound(recipient: string, raw: Buffer) {
+    const mailbox = await this.mailboxService.findByEmailAddress(recipient.toLowerCase());
+    if (!mailbox) {
+      throw new NotFoundException(`Tidak ada mailbox untuk alamat ${recipient}`);
+    }
+
+    const inbox = await this.mailboxService.getFolderByType(mailbox.id, 'inbox');
+    const parsed = await simpleParser(raw);
+
+    const fromAddr = parsed.from?.value?.[0]?.address ?? 'unknown@unknown';
+    const html = typeof parsed.html === 'string' ? parsed.html : null;
+    const receivedAt = parsed.date ?? new Date();
+
+    const email = await this.prisma.email.create({
+      data: {
+        mailboxId: mailbox.id,
+        folderId: inbox.id,
+        // Email masuk memulai thread-nya sendiri; korelasi thread lintas-sistem lewat
+        // header In-Reply-To/References belum diimplementasikan (lihat README).
+        threadId: randomUUID(),
+        fromAddr,
+        toAddr: recipient,
+        subject: parsed.subject ?? '(tanpa subjek)',
+        body: html ?? parsed.text ?? '',
+        isHtml: Boolean(html),
+        sendStatus: 'sent',
+        sentAt: receivedAt,
+        isRead: false,
+      },
+    });
+
+    // Lampiran email masuk disimpan ke disk seperti lampiran keluar, supaya bisa diunduh
+    // lewat endpoint download yang sama.
+    for (const att of parsed.attachments ?? []) {
+      if (!att.content) continue;
+      await this.storeAttachment(
+        email.id,
+        att.filename ?? 'lampiran',
+        att.content,
+        att.content.length,
+      ).catch((err) =>
+        this.logger.warn(`Gagal menyimpan lampiran email masuk ${email.id}: ${(err as Error).message}`),
+      );
+    }
+
+    this.logger.log(`Email masuk diterima untuk ${recipient} (dari ${fromAddr}) -> ${email.id}`);
+    return { id: email.id, mailboxId: mailbox.id };
   }
 
   async listAttachments(mailboxId: string, emailId: string) {

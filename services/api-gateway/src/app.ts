@@ -51,6 +51,14 @@ export function createApp(config: GatewayConfig): Express {
     res.status(403).json({ message: 'Endpoint internal tidak dapat diakses lewat gateway publik' });
   });
 
+  // POST /emails/ingest dipanggil mail-engine (Postfix pipe) langsung ke mail-app-service,
+  // TIDAK lewat gateway. Diblokir eksplisit di sini karena prefix /emails di route table
+  // bawah akan mem-proxy-nya ke publik — dan endpoint itu bisa menyuntikkan email ke Inbox
+  // siapa pun kalau INTERNAL_API_KEY sampai bocor. Tidak ada alasan sah memanggilnya dari luar.
+  app.use('/emails/ingest', (_req: Request, res: Response) => {
+    res.status(403).json({ message: 'Endpoint ingest tidak dapat diakses lewat gateway publik' });
+  });
+
   for (const { prefix, target } of buildRouteTable(config)) {
     app.use(
       prefix,
