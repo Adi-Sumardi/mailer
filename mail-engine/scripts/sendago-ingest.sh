@@ -16,6 +16,13 @@ set -u
 RECIPIENT="${1:-}"
 [ -n "$RECIPIENT" ] || exit 67
 
+# Konfigurasi dibaca dari file, BUKAN environment: proses pipe dijalankan master Postfix yang
+# tidak mewarisi environment container (lihat penjelasan di config/user-patches.sh, yang
+# menulis file ini saat startup).
+INGEST_ENV_FILE='/etc/sendago-ingest.env'
+# shellcheck disable=SC1090
+[ -r "$INGEST_ENV_FILE" ] && . "$INGEST_ENV_FILE"
+
 INGEST_URL="${SENDAGO_INGEST_URL:-http://host.docker.internal:18002/emails/ingest}"
 API_KEY="${SENDAGO_INTERNAL_API_KEY:-}"
 

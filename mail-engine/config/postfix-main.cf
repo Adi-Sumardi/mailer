@@ -15,8 +15,3 @@
 relay_domains = texthash:/tmp/docker-mailserver/sendago-tenant-domains.cf
 transport_maps = texthash:/tmp/docker-mailserver/sendago-transport.cf
 
-# pipe(8) menjalankan skrip dengan environment yang SANGAT dibatasi (default cuma
-# TZ MAIL_CONFIG LANG) — tanpa baris ini, skrip ingest tidak akan pernah melihat URL
-# maupun API key-nya dan setiap email masuk akan ter-defer. Nilainya diisi dari
-# mail-engine/.env (lihat .env.example).
-export_environment = TZ MAIL_CONFIG LANG SENDAGO_INGEST_URL SENDAGO_INTERNAL_API_KEY
