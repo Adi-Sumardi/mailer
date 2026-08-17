@@ -10,11 +10,15 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, randomUUID, createHash } from 'crypto';
 import * as bcrypt from 'bcryptjs';
+import { authenticator } from 'otplib';
+import * as qrcode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailAppClientService } from '../mail-app-client/mail-app-client.service';
 import { DomainProvisioningClientService } from '../domain-provisioning-client/domain-provisioning-client.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { Login2FaDto } from './dto/login-2fa.dto';
+import { Verify2FaDto } from './dto/verify-2fa.dto';
 import { JwtPayload } from './jwt-payload.interface';
 
 const PASSWORD_HASH_ROUNDS = 10;
@@ -96,11 +100,109 @@ export class AuthService {
 
     user.mailboxId = await this.ensureMailbox(user);
 
+    if (user.isTwoFactorEnabled) {
+      const mfaToken = this.jwtService.sign(
+        { sub: user.id, isMfaPending: true },
+        { expiresIn: '5m' },
+      );
+      return {
+        require2FA: true,
+        mfaToken,
+      };
+    }
+
     return {
       user: this.toPublicUser(user),
       accessToken: this.issueAccessToken(user),
       refreshToken: await this.issueRefreshToken(user.id),
     };
+  }
+
+  async login2FA(dto: Login2FaDto) {
+    let payload: { sub: string; isMfaPending?: boolean };
+    try {
+      payload = this.jwtService.verify(dto.mfaToken);
+    } catch {
+      throw new UnauthorizedException('Sesi 2FA telah kedaluwarsa, silakan login ulang');
+    }
+
+    if (!payload.isMfaPending || !payload.sub) {
+      throw new UnauthorizedException('Token 2FA tidak valid');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user || !user.isTwoFactorEnabled || !user.twoFactorSecret) {
+      throw new UnauthorizedException('Google 2FA tidak diaktifkan pada akun ini');
+    }
+
+    const isValid = authenticator.verify({ token: dto.code, secret: user.twoFactorSecret });
+    if (!isValid) {
+      throw new UnauthorizedException('Kode 2FA salah atau kedaluwarsa');
+    }
+
+    user.mailboxId = await this.ensureMailbox(user);
+
+    return {
+      user: this.toPublicUser(user),
+      accessToken: this.issueAccessToken(user),
+      refreshToken: await this.issueRefreshToken(user.id),
+    };
+  }
+
+  async generate2FA(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User ${userId} tidak ditemukan`);
+    }
+
+    const secret = authenticator.generateSecret();
+    const otpauthUrl = authenticator.keyuri(user.email, 'SendagoMail', secret);
+    const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorSecret: secret },
+    });
+
+    return { secret, otpauthUrl, qrCodeUrl };
+  }
+
+  async enable2FA(userId: string, dto: Verify2FaDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.twoFactorSecret) {
+      throw new BadRequestException('Kunci 2FA belum dibuat. Silakan generate QR Code terlebih dahulu.');
+    }
+
+    const isValid = authenticator.verify({ token: dto.code, secret: user.twoFactorSecret });
+    if (!isValid) {
+      throw new BadRequestException('Kode 2FA salah atau kedaluwarsa');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isTwoFactorEnabled: true },
+    });
+
+    return { success: true, message: 'Google 2FA berhasil diaktifkan' };
+  }
+
+  async disable2FA(userId: string, dto: Verify2FaDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.isTwoFactorEnabled || !user.twoFactorSecret) {
+      throw new BadRequestException('Google 2FA belum aktif pada akun ini');
+    }
+
+    const isValid = authenticator.verify({ token: dto.code, secret: user.twoFactorSecret });
+    if (!isValid) {
+      throw new BadRequestException('Kode 2FA salah atau kedaluwarsa');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isTwoFactorEnabled: false, twoFactorSecret: null },
+    });
+
+    return { success: true, message: 'Google 2FA berhasil dinonaktifkan' };
   }
 
   async refresh(refreshToken: string) {
@@ -202,9 +304,11 @@ export class AuthService {
     role: string;
     tenantId: string | null;
     mailboxId: string | null;
+    isTwoFactorEnabled?: boolean;
     createdAt: Date;
   }) {
-    const { id, email, role, tenantId, mailboxId, createdAt } = user;
-    return { id, email, role, tenantId, mailboxId, createdAt };
+    const { id, email, role, tenantId, mailboxId, isTwoFactorEnabled = false, createdAt } = user;
+    return { id, email, role, tenantId, mailboxId, isTwoFactorEnabled, createdAt };
   }
 }
+

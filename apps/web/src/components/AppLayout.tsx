@@ -14,6 +14,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
     { to: '/calendar', label: 'Kalender' },
     { to: '/tasks', label: 'Tugas' },
     { to: '/automation-rules', label: 'Automation' },
+    { to: '/security', label: 'Keamanan (2FA)' },
   ],
   tenant_admin: [
     { to: '/dashboard', label: 'Dashboard' },
@@ -26,6 +27,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
     { to: '/calendar', label: 'Kalender' },
     { to: '/tasks', label: 'Tugas' },
     { to: '/automation-rules', label: 'Automation' },
+    { to: '/security', label: 'Keamanan (2FA)' },
   ],
   end_user: [
     { to: '/dashboard', label: 'Dashboard' },
@@ -34,6 +36,7 @@ const NAV_BY_ROLE: Record<CurrentUser['role'], { to: string; label: string }[]> 
     { to: '/calendar', label: 'Kalender' },
     { to: '/tasks', label: 'Tugas' },
     { to: '/automation-rules', label: 'Automation' },
+    { to: '/security', label: 'Keamanan (2FA)' },
   ],
 };
 
@@ -106,6 +109,9 @@ export default function AppLayout() {
                 {initialsFor(user.email)}
               </div>
               <span className="app-topbar-email">{user.email}</span>
+              <button className="btn-ghost" onClick={() => navigate('/security')} title="Pengaturan Keamanan & Google 2FA">
+                🔐 Keamanan (2FA)
+              </button>
               <button className="btn-ghost" onClick={handleLogout}>
                 Keluar
               </button>

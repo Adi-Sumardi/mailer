@@ -24,3 +24,4 @@ mail-engine/data/
 
 # Logs
 *.log
+*.tsbuildinfo

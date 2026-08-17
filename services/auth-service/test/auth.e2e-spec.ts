@@ -272,4 +272,73 @@ describe('Auth (e2e) — BR-08', () => {
 
     spy.mockRestore();
   });
+
+  it('Google 2FA Flow: generate, enable, login dengan 2FA, dan disable', async () => {
+    const { authenticator } = require('otplib');
+
+    // 1. Register & Login awal
+    const reg = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: '2fa@sendago.test', password: 'password123', role: 'super_admin' })
+      .expect(201);
+
+    const token = reg.body.accessToken;
+
+    // 2. Generate 2FA secret & QR
+    const genRes = await request(app.getHttpServer())
+      .post('/auth/2fa/generate')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    expect(genRes.body.secret).toBeDefined();
+    expect(genRes.body.qrCodeUrl).toContain('data:image/png');
+
+    const secret = genRes.body.secret;
+    const validCode = authenticator.generate(secret);
+
+    // 3. Enable 2FA dengan kode valid
+    await request(app.getHttpServer())
+      .post('/auth/2fa/enable')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code: validCode })
+      .expect(201);
+
+    // 4. Try login -> Menerima require2FA: true & mfaToken
+    const loginRes = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: '2fa@sendago.test', password: 'password123' })
+      .expect(201);
+
+    expect(loginRes.body.require2FA).toBe(true);
+    expect(loginRes.body.mfaToken).toBeDefined();
+
+    // 5. Complete login2FA dengan mfaToken + kode TOTP baru
+    const codeStep2 = authenticator.generate(secret);
+    const login2FaRes = await request(app.getHttpServer())
+      .post('/auth/login-2fa')
+      .send({ mfaToken: loginRes.body.mfaToken, code: codeStep2 })
+      .expect(201);
+
+    expect(login2FaRes.body.accessToken).toBeDefined();
+    expect(login2FaRes.body.user.isTwoFactorEnabled).toBe(true);
+
+    // 6. Disable 2FA
+    const disableCode = authenticator.generate(secret);
+    await request(app.getHttpServer())
+      .post('/auth/2fa/disable')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code: disableCode })
+      .expect(201);
+
+    // 7. Login biasa kembali tanpa 2FA
+    const normalLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: '2fa@sendago.test', password: 'password123' })
+      .expect(201);
+
+    expect(normalLogin.body.require2FA).toBeUndefined();
+    expect(normalLogin.body.accessToken).toBeDefined();
+  });
 });
+
+

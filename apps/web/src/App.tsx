@@ -12,6 +12,7 @@ import TemplatePage from './routes/TemplatePage';
 import CalendarPage from './routes/CalendarPage';
 import TasksPage from './routes/TasksPage';
 import AutomationRulesPage from './routes/AutomationRulesPage';
+import SecuritySettingsPage from './routes/SecuritySettingsPage';
 import TenantsPage from './routes/admin/TenantsPage';
 import DomainsPage from './routes/admin/DomainsPage';
 import IntegrationSettingsPage from './routes/admin/IntegrationSettingsPage';
@@ -62,6 +63,7 @@ function App() {
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/automation-rules" element={<AutomationRulesPage />} />
+                <Route path="/security" element={<SecuritySettingsPage />} />
               </Route>
               <Route element={<RoleRoute allow={['super_admin']} />}>
                 <Route path="/admin/tenants" element={<TenantsPage />} />

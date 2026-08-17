@@ -7,6 +7,7 @@ export interface CurrentUser {
   role: 'super_admin' | 'tenant_admin' | 'end_user';
   tenantId: string | null;
   mailboxId: string | null;
+  isTwoFactorEnabled?: boolean;
 }
 
 interface AuthTokens {
@@ -15,10 +16,19 @@ interface AuthTokens {
   user: CurrentUser;
 }
 
+interface LoginResult {
+  require2FA?: boolean;
+  mfaToken?: string;
+}
+
 interface AuthContextValue {
   user: CurrentUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult | void>;
+  login2FA: (mfaToken: string, code: string) => Promise<void>;
+  generate2FA: () => Promise<{ secret: string; otpauthUrl: string; qrCodeUrl: string }>;
+  enable2FA: (code: string) => Promise<void>;
+  disable2FA: (code: string) => Promise<void>;
   register: (params: {
     email: string;
     password: string;
@@ -54,9 +64,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await api.post<AuthTokens>('/auth/login', { email, password }, { skipAuth: true });
+    const res = await api.post<AuthTokens & LoginResult>('/auth/login', { email, password }, { skipAuth: true });
+    if (res.require2FA && res.mfaToken) {
+      return { require2FA: true, mfaToken: res.mfaToken };
+    }
+    if (res.accessToken && res.refreshToken && res.user) {
+      tokenStorage.setTokens(res.accessToken, res.refreshToken);
+      setUser(res.user);
+    }
+  }, []);
+
+  const login2FA = useCallback(async (mfaToken: string, code: string) => {
+    const res = await api.post<AuthTokens>('/auth/login-2fa', { mfaToken, code }, { skipAuth: true });
     tokenStorage.setTokens(res.accessToken, res.refreshToken);
     setUser(res.user);
+  }, []);
+
+  const generate2FA = useCallback(async () => {
+    return api.post<{ secret: string; otpauthUrl: string; qrCodeUrl: string }>('/auth/2fa/generate');
+  }, []);
+
+  const enable2FA = useCallback(async (code: string) => {
+    await api.post('/auth/2fa/enable', { code });
+    setUser((prev) => (prev ? { ...prev, isTwoFactorEnabled: true } : prev));
+  }, []);
+
+  const disable2FA = useCallback(async (code: string) => {
+    await api.post('/auth/2fa/disable', { code });
+    setUser((prev) => (prev ? { ...prev, isTwoFactorEnabled: false } : prev));
   }, []);
 
   const register = useCallback(
@@ -78,7 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, login2FA, generate2FA, enable2FA, disable2FA, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -91,3 +128,4 @@ export function useAuth(): AuthContextValue {
   }
   return ctx;
 }
+

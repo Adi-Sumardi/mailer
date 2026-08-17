@@ -26,6 +26,10 @@ model User {
   // null sampai mailbox berhasil diprovisikan lewat mail-app-service (FR-07).
   mailboxId String? @map("mailbox_id")
 
+  // Google 2FA (TOTP)
+  isTwoFactorEnabled Boolean @default(false) @map("is_two_factor_enabled")
+  twoFactorSecret   String?  @map("two_factor_secret")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

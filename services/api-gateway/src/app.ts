@@ -32,6 +32,10 @@ function buildRouteTable(config: GatewayConfig): Array<{ prefix: string; target:
 export function createApp(config: GatewayConfig): Express {
   const app = express();
 
+  // Membaca header X-Forwarded-For dari reverse proxy (mis. Nginx / Docker network)
+  // agar rate-limiting dihitung per client IP asli, bukan IP proxy gabungan.
+  app.set('trust proxy', 1);
+
   app.use(cors({ origin: config.corsOrigin.split(',').map((o) => o.trim()) }));
   app.use(
     rateLimit({
